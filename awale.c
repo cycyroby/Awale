@@ -135,3 +135,8 @@ int main() {
     printf("%d\n", isGameFinished(1, holes));
 }
 
+void initGame(int *holes, int numberOfHoles) {
+    for (int i=0; i<numberOfHoles; i++) {
+        holes[i] = 4;
+    }
+}
