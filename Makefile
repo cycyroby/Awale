@@ -1,13 +1,8 @@
-FLAGS = -Wall -g -ansi -pedantic -std=c++11
+test : test.o 
+	gcc test.o -o test
 
-ifeq ($(MAP), 1)
-	FLAGS += -DMAP
-endif
-ifeq ($(MAP), -1)
-	FLAGS += -UMAP
-endif
-
-
+test.o: test.c
+	gcc -c test.c 
 
 clean : 
-	-rm *.o $(objects) 
+	-rm *.o $(objects) test
