@@ -116,24 +116,7 @@ bool isGameFinished(int player, int * holes) {
     }
 }
 
-int main() {
-    int * holes = malloc(sizeof(int)*12);
 
-    holes[0] = 0;
-    holes[1] = 0;
-    holes[2] = 0;
-    holes[3] = 0;
-    holes[4] = 0;
-    holes[5] = 0;
-    holes[6] = 0;
-    holes[7] = 0;
-    holes[8] = 0;
-    holes[9] = 0;
-    holes[10] = 2;
-    holes[11] = 0;
-
-    printf("%d\n", isGameFinished(1, holes));
-}
 
 void initGame(int *holes, int numberOfHoles) {
     for (int i=0; i<numberOfHoles; i++) {
