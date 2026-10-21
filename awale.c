@@ -123,3 +123,27 @@ void initGame(int *holes, int numberOfHoles) {
         holes[i] = 4;
     }
 }
+
+int collectSeed(int player, int * holes, int myScore, int arrival) {
+    if (player == 1) {
+        if (5 < arrival && arrival < 12) {
+            int i = 0;
+            while ((holes[arrival - i] == 2 || holes[arrival - i] == 3) && arrival > 5) {
+                myScore += holes[arrival - i];
+                i++;
+            }
+        }
+    }
+
+    if (player == 2) {
+        if (0 <= arrival && arrival < 6) {
+            int i = 0;
+            while ((holes[arrival - i] == 2 || holes[arrival -i] == 3 ) && arrival >= 0) {
+                myScore += holes[arrival - i];
+                i++;
+            }
+        }
+    }
+
+    return myScore;
+}

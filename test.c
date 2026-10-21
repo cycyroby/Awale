@@ -20,8 +20,9 @@ void gameInitTest() {
 
 int main(){
     gameInitTest();
-    /*
-    int * holes = malloc(sizeof(int)*12);
+
+    
+    /*int * holes = malloc(sizeof(int)*12);
 
     holes[0] = 0;
     holes[1] = 0;
@@ -30,12 +31,14 @@ int main(){
     holes[4] = 0;
     holes[5] = 0;
     holes[6] = 0;
-    holes[7] = 0;
-    holes[8] = 0;
-    holes[9] = 0;
+    holes[7] = 2;
+    holes[8] = 1;
+    holes[9] = 3;
     holes[10] = 2;
     holes[11] = 0;
 
-    printf("%d\n", isGameFinished(1, holes));*/
+    printf("%d\n", collectSeed(2, holes, 0, 10));
+
+    //printf("%d\n", isGameFinished(1, holes));*/
 
 }
