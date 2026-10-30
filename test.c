@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdbool.h>
 
 #include "awale.c"
 
@@ -25,27 +26,104 @@ void gameShowTest() {
     int player = 1;
     int myScore = 1;
     int opponentScore = 2;
-    printf("All holes have 4 seeds, I am player %d, my score is %d, my opponents score is %d\nplayer 1 has 0 in first hole\nplayer 2 has 2 in his last hole\nplayer 1 has 1 in second hole\nplayer 2 has 3 in his second to last hole\n", player, myScore, opponentScore);
+    printf("All holes have 4 seeds, my score is %d, my opponents score is %d\nplayer 1 has 0 in first hole\nplayer 2 has 2 in his last hole\nplayer 1 has 1 in second hole\nplayer 2 has 3 in his second to last hole\n", myScore, opponentScore);
 
     int * holes;
     int numberOfHoles = 12;
     holes = malloc(sizeof(int)*numberOfHoles);
     initGame(holes, numberOfHoles);
     holes[0] = 0; // player 1 has 0 in first hole
-    holes[6] = 2; // player 2 has 2 in his last hole
     holes[1] = 1; // player 1 has 1 in second hole
+    holes[6] = 2; // player 2 has 2 in his last hole
     holes[7] = 3; // player 2 has 3 in his second to last hole
+
+    printf("I am player %d\n", player);
+    showGame(holes, numberOfHoles, player, opponentScore, myScore);
+
+    player = 2;
+    printf("Same but I am player %d\n", player);
     showGame(holes, numberOfHoles, player, opponentScore, myScore);
 
     printf("\n");
     printf("-----end of Game Show test-----\n\n");
 }
 
-int main(){
-    gameInitTest();
+void moveSeedTest() {
+    printf("-----move Seed test-----\n");
+
+    int * holes;
+    int numberOfHoles = 12;
+    holes = malloc(sizeof(int)*numberOfHoles);
+    initGame(holes, numberOfHoles);
+    holes[2] = 13;
+
+    showGame(holes, numberOfHoles, 1, 0, 0);
+    printf("Move the seeds from my third hole\n");
+    moveSeed(2, holes);
+    showGame(holes, numberOfHoles, 1, 0, 0);
+    printf("Move the seeds from my third hole - it shouldn't change anything since there are no more seeds in that hole\n");
+    moveSeed(2, holes);
+    showGame(holes, numberOfHoles, 1, 0, 0);
+
+    printf("-----end of move Seed test-----\n\n");
+}
+
+void hasToBeFedTest() {
+    printf("-----has to be fed test-----\n");
+
+    printf("A player has to be fed if they don't have any sedds in their holes\n");
+    printf("I am player 1\n");
+
+    int * holes;
+    int numberOfHoles = 12;
+    holes = malloc(sizeof(int)*numberOfHoles);
+    initGame(holes, numberOfHoles);
+    holes[0] = 0;
+    holes[1] = 0;
+    holes[2] = 0;
+    holes[3] = 0;
+    holes[4] = 0;
+    holes[5] = 0;
+    showGame(holes, numberOfHoles, 1, 0, 0);
+
+    bool hasTobeFed1;
+    bool hasTobeFed2;
+
+    hasTobeFed1 = hasToBeFed(1 ,holes);
+    hasTobeFed2 = hasToBeFed(2 ,holes);
+
+    if (hasTobeFed1) {
+        printf("player 1 has to be fed : true\n");
+    }
+    else {
+        printf("player 1 has to be fed : false\n");
+    }
+    if (hasTobeFed2) {
+        printf("player 2 has to be fed : true\n");
+    }
+    else {
+        printf("player 2 has to be fed : false\n");
+    }
+    
+    printf("-----end of has to be fed test-----\n\n");
+}
+
+void canFeedTest() {
+    printf("-----can feed test-----\n");
 
     
-    /*int * holes = malloc(sizeof(int)*12);
+    printf("-----end of can feed test-----\n\n");
+}
+
+void collectSeedTest() {
+    printf("-----collect Seed test-----\n");
+
+    int numberOfHoles = 12;
+    int * holes = malloc(sizeof(int)*numberOfHoles);
+
+    int myScore = 0;
+    int opponentScore = 0;
+    int playerNumber = 2;
 
     holes[0] = 0;
     holes[1] = 0;
@@ -60,9 +138,44 @@ int main(){
     holes[10] = 2;
     holes[11] = 0;
 
-    printf("%d\n", collectSeed(2, holes, 0, 10));
+    showGame(holes, numberOfHoles, playerNumber, opponentScore, myScore);
 
-    //printf("%d\n", isGameFinished(1, holes));*/
+    myScore = collectSeed(playerNumber, holes, myScore, 10);
 
+    printf("My new score should be : %d, and it is : %d\n",myScore+holes[10], myScore);
+
+    printf("-----end of collect Seed test-----\n\n");
+}
+
+void gameFinishedTest() {
+    printf("-----game Finished test-----\n");
+
+    int * holes = malloc(sizeof(int)*12);
+
+    holes[0] = 0;
+    holes[1] = 0;
+    holes[2] = 0;
+    holes[3] = 0;
+    holes[4] = 0;
+    holes[5] = 0;
+    holes[6] = 0;
+    holes[7] = 2;
+    holes[8] = 1;
+    holes[9] = 3;
+    holes[10] = 2;
+    holes[11] = 0;
+
+    printf("%d\n", isGameFinished(1, holes));
+
+    printf("-----end of game Finished test-----\n\n");
+}
+
+int main(){
+    gameInitTest();
     gameShowTest();
+    moveSeedTest();
+    hasToBeFedTest();
+    canFeedTest();
+    collectSeedTest();
+    //gameFinishedTest();
 }

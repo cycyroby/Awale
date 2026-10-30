@@ -2,21 +2,32 @@
 #include <stdbool.h>
 #include <stdlib.h>
 
-int moveSeed(int x, int *holes) {
+/*
+we choose the index hole so it moves the seeds in that hole in the counterclockwise direction
+*/
+void moveSeed(int index, int *holes) {
 
-    int y = holes[x];
+    int y = holes[index];
     int i;
+    int endIndex = index+y+1;
 
-    for (i = x+1; i < x+y+1; i++){
-        holes[i%12] = holes[i%12] + 1;
+    for (i = index+1; i < endIndex; i++){
+        if (i%12 != index){
+            holes[i%12] = holes[i%12] + 1;
+            holes[index] -= 1;
+        }
+        else{
+            endIndex++;
+        }
     }
-
-    return (i-1)%12; //à tester
 
 }
 
+/*
+checks if all the holes of the player given are at 0 seeds (= it needs to be fed)
+and then returns true or false accordingly
+*/
 bool hasToBeFed(int player, int * holes) {
-    printf("a\n");
     bool losing = true;
     if (player == 1) {
         for (int i = 0; i < 6; i++) {
@@ -33,13 +44,13 @@ bool hasToBeFed(int player, int * holes) {
             }
         }
     }
-    printf("%d\n", losing);
-    printf("b\n");
-
     return losing; 
 }
 
-int * canFeed(int player, int * holes) { //player losing
+/*
+a losing player given as input (= a player that has to be fed) checks which holes can feed it from its opponent's holes
+*/
+int * canFeed(int player, int * holes) {
     int numberOfHoles = 0;
     int * holesToCheck = malloc((sizeof(int)*6));
     if (player == 1) {
@@ -103,6 +114,9 @@ int * canFeed(int player, int * holes) { //player losing
 
 }
 
+/*
+
+*/
 bool isGameFinished(int player, int * holes) {
     printf("debut iGF\n");
     if (canFeed(player, holes) != NULL) {
@@ -111,17 +125,23 @@ bool isGameFinished(int player, int * holes) {
     }
 
     else {
-        printf("fin appek CF\n");
+        printf("fin appel CF\n");
         return true;
     }
 }
 
+/*
+initialise the game with 4 seeds in each hole
+*/
 void initGame(int *holes, int numberOfHoles) {
     for (int i=0; i<numberOfHoles; i++) {
         holes[i] = 4;
     }
 }
 
+/*
+
+*/
 int collectSeed(int player, int * holes, int myScore, int arrival) {
     if (player == 1) {
         if (5 < arrival && arrival < 12) {
@@ -146,6 +166,10 @@ int collectSeed(int player, int * holes, int myScore, int arrival) {
     return myScore;
 }
 
+
+/*
+used in show game to make the separation line
+*/
 void printSeparationLine(int numberOfHoles, int holeWidth){
     // separation line
     for (int i=0; i<numberOfHoles/2; i++) {
@@ -156,12 +180,16 @@ void printSeparationLine(int numberOfHoles, int holeWidth){
     }
     printf("\n");
 }
-void printHoles(int*holes, int numberOfHoles, int holeWidth, int index, char*scoreText, int score) {
+
+/*
+Line number indicates if we're printing the row of holes of the opponent (lineNumber 1) or ours (lineNumber 2)
+*/
+void printHoles(int*holes, int numberOfHoles, int holeWidth, int index, int lineNumber, char*scoreText, int score) {
     int next;
-    if (index == 0) {
+    if (lineNumber == 2) {
         next = 1;
     }
-    else {
+    else if (lineNumber == 1){
         next = -1;
     }
     for (int i=0; i<numberOfHoles/2; i++) {
@@ -198,6 +226,21 @@ void printHoles(int*holes, int numberOfHoles, int holeWidth, int index, char*sco
     printf("|    %s : %d\n", scoreText, score);
 }
 
+/* 
+ Shows the game in ASCII art 
+ parameter player : indicates which player I am 
+  ___________ ___________ ___________ ___________ ___________ ___________ 
+ |_holes[11]_|_holes[10]_|_holes[9]__|_holes[8]__|_holes[7]__|_holes[6]__| player 2
+  ___________ ___________ ___________ ___________ ___________ ___________ 
+ |_holes[0]__|_holes[1]__|_holes[2]__|_holes[3]__|_holes[4]__|_holes[5]__| player 1
+ 
+ but my board is shown in front of me
+ so when I am player 2 :
+  ___________ ___________ ___________ ___________ ___________ ___________ 
+ |_holes[5]__|_holes[4]__|_holes[3]__|_holes[2]__|_holes[1]__|_holes[0]__| player 1
+  ___________ ___________ ___________ ___________ ___________ ___________ 
+ |_holes[6]__|_holes[7]__|_holes[8]__|_holes[9]__|_holes[10]_|_holes[11]_| player 2
+ */
 void showGame(int *holes, int numberOfHoles, int player, int opponentScore, int myScore) {
     int holeWidth = 4;
 
@@ -209,21 +252,21 @@ void showGame(int *holes, int numberOfHoles, int player, int opponentScore, int 
         iMine = 0;
     }
     else if (player == 2) {
-        iOpp = 0;
-        iMine = 11;
+        iOpp = 5;
+        iMine = 6;
     }
 
     // first line
     printSeparationLine(numberOfHoles, holeWidth);
 
     // show opponnent's holes
-    printHoles(holes, numberOfHoles, holeWidth, iOpp, "Opponent's score", opponentScore);
+    printHoles(holes, numberOfHoles, holeWidth, iOpp, 1, "Opponent's score", opponentScore);
 
     // second separation line
     printSeparationLine(numberOfHoles, holeWidth);
 
     // show my holes
-    printHoles(holes, numberOfHoles, holeWidth, iMine, "My score", myScore);
+    printHoles(holes, numberOfHoles, holeWidth, iMine, 2, "My score", myScore);
 
     printf("\n");
 }
