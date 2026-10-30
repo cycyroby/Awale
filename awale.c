@@ -47,69 +47,56 @@ bool hasToBeFed(int player, int * holes) {
     return losing; 
 }
 
+
 /*
 a losing player given as input (= a player that has to be fed) checks which holes can feed it from its opponent's holes
 */
-int * canFeed(int player, int * holes) {
+bool canFeed(int player, int * holes, int* possibleHoles) {
     int numberOfHoles = 0;
-    int * holesToCheck = malloc((sizeof(int)*6));
+    int * holesThatCanFeed = malloc((sizeof(int)*12));
+    int arrivingHole;
+
     if (player == 1) {
         for (int i = 6; i < 12; i++) {
-            moveSeed(i, holes);
-            if (!hasToBeFed(player, holes)) {
-                numberOfHoles++;
-                holesToCheck[i-6] = 1;
+            holesThatCanFeed[i] = 0;
+            // holes[i]/12 because when we do a complete round the starting hole is jumped
+            arrivingHole = (i + holes[i] + holes[i]/12);
+            // if the arriving hole is on the other's holes or passes through them
+            // expl : on 6 there are 6 seeds (6+6 = 12) %12 = 0
+            //        -> it arrives until the 1st hole of the hungry player
+            // expl : on 6 there are 5 seeds (6+5 = 11) %12 = 11
+            //        -> it arrives until the last of the non hungry player - the hungry player is still hungry
+            // expl : on 6 there are 16 seeds (6+16 + 1since16>12 = 23) %12 = 11
+            //        -> it also arrives on the last of the non hungry but before it passed through all the hungry's holes
+            if (12 <= arrivingHole) {
+                numberOfHoles += 1;
+                holesThatCanFeed[i] = 1;
             }
-            else {
-                holesToCheck[i-6] = 0;
-            }
-        }
-        if(numberOfHoles != 0) {
-            int * possibleHoles = malloc(sizeof(int)*numberOfHoles);
-            int j = 0;
-            for (int k = 0; k < 6; k++) {
-                if (holesToCheck[k] == 1) {
-                    possibleHoles[j] = k + 6;
-                }
-
-                j++;
-            }
-            return possibleHoles;
-
-        }
-
-        else {
-            return NULL;
         }
     }
     else {
         for (int i = 0; i < 6; i++) {
-            moveSeed(i, holes);
-            if (!hasToBeFed(player, holes)) {
-                numberOfHoles++;
-                holesToCheck[i] = 1;
-            }
-            else {
-                holesToCheck[i] = 0;
+            holesThatCanFeed[i] = 0;
+            arrivingHole = (i + holes[i] + holes[i]/12);
+            if (6 <= arrivingHole) {
+                numberOfHoles += 1;
+                holesThatCanFeed[i] = 1;
             }
         }
-        if(numberOfHoles != 0) {
-            int * possibleHoles = malloc(sizeof(int)*numberOfHoles);
-            int j = 0;
-            for (int k = 0; k < 6; k++) {
-                if (holesToCheck[k] == 1) {
-                    possibleHoles[j] = k;
-                }
+    }
+
+    if(numberOfHoles != 0) {
+        int j = 0;
+        for (int k = 0; k < 12; k++) {
+            if (holesThatCanFeed[k] == 1) {
+                possibleHoles[j] = k;
                 j++;
             }
-
-            return possibleHoles;
-
         }
-        else {
-            return NULL;
-        }
-
+        return true;
+    }
+    else {
+        return false;
     }
 
 }
@@ -118,14 +105,11 @@ int * canFeed(int player, int * holes) {
 
 */
 bool isGameFinished(int player, int * holes) {
-    printf("debut iGF\n");
-    if (canFeed(player, holes) != NULL) {
-        printf("appel CF\n");
+    int*possibleHoles = malloc(sizeof(int)*12);
+    if (canFeed(player, holes, possibleHoles)) {
         return false;
     }
-
     else {
-        printf("fin appel CF\n");
         return true;
     }
 }

@@ -111,6 +111,122 @@ void hasToBeFedTest() {
 void canFeedTest() {
     printf("-----can feed test-----\n");
 
+    int numberOfHoles = 12;
+    int * holes = malloc(sizeof(int)*numberOfHoles);
+
+    int * possibleHoles = malloc(sizeof(int)*numberOfHoles);
+    for (int i=0; i<numberOfHoles; i++){
+        possibleHoles[i] = -1;
+    }
+    int myScore = 0;
+    int opponentScore = 0;
+    int playerNumber = 2;
+    bool possible;
+
+    printf("I am player %d\n\n", playerNumber);
+
+    holes[0] = 0;
+    holes[1] = 0;
+    holes[2] = 0;
+    holes[3] = 0;
+    holes[4] = 0;
+    holes[5] = 0;
+    holes[6] = 12;
+    holes[7] = 2;
+    holes[8] = 1;
+    holes[9] = 3;
+    holes[10] = 2;
+    holes[11] = 0;
+
+    showGame(holes, numberOfHoles, playerNumber, opponentScore, myScore);
+
+    possible = canFeed(1, holes, possibleHoles);
+    
+    printf("The possible hole indexes should be : 6, 9, 10\n");
+    if(possible){
+        printf("The possible hole indexes are :");
+        for (int i=0; i<numberOfHoles; i++){
+            if (possibleHoles[i] != -1){
+                printf("%d, ", possibleHoles[i]);
+            }
+        }
+        printf("\n");
+    }
+    else{
+        printf("There are no possible holes\n");
+    }
+
+    //----------------------------
+    for (int i=0; i<numberOfHoles; i++){
+        possibleHoles[i] = -1;
+    }
+
+    holes[0] = 0;
+    holes[1] = 0;
+    holes[2] = 0;
+    holes[3] = 0;
+    holes[4] = 0;
+    holes[5] = 0;
+    holes[6] = 0;
+    holes[7] = 2;
+    holes[8] = 0;
+    holes[9] = 0;
+    holes[10] = 1;
+    holes[11] = 0;
+
+    showGame(holes, numberOfHoles, playerNumber, opponentScore, myScore);
+
+    possible = canFeed(1, holes, possibleHoles);
+    
+    printf("The possible hole indexes should be : none\n");
+    if(possible){
+        printf("The possible hole indexes are :");
+        for (int i=0; i<numberOfHoles; i++){
+            if (possibleHoles[i] != -1){
+                printf("%d, ", possibleHoles[i]);
+            }
+        }
+        printf("\n");
+    }
+    else{
+        printf("There are no possible holes\n");
+    }
+
+    //----------------------------
+    for (int i=0; i<numberOfHoles; i++){
+        possibleHoles[i] = -1;
+    }
+
+    holes[0] = 0;
+    holes[1] = 0;
+    holes[2] = 0;
+    holes[3] = 0;
+    holes[4] = 0;
+    holes[5] = 1;
+    holes[6] = 0;
+    holes[7] = 0;
+    holes[8] = 0;
+    holes[9] = 0;
+    holes[10] = 0;
+    holes[11] = 0;
+
+    showGame(holes, numberOfHoles, playerNumber, opponentScore, myScore);
+
+    possible = canFeed(2, holes, possibleHoles);
+    
+    printf("The possible hole indexes should be : 5\n");
+    if(possible){
+        printf("The possible hole indexes are :");
+        for (int i=0; i<numberOfHoles; i++){
+            if (possibleHoles[i] != -1){
+                printf("%d, ", possibleHoles[i]);
+            }
+        }
+        printf("\n");
+    }
+    else{
+        printf("There are no possible holes\n");
+    }
     
     printf("-----end of can feed test-----\n\n");
 }
@@ -177,5 +293,5 @@ int main(){
     hasToBeFedTest();
     canFeedTest();
     collectSeedTest();
-    //gameFinishedTest();
+    gameFinishedTest();
 }
