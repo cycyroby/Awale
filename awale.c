@@ -184,6 +184,52 @@ void printSeparationLine(int numberOfHoles, int holeWidth){
 /*
 Line number indicates if we're printing the row of holes of the opponent (lineNumber 1) or ours (lineNumber 2)
 */
+void printIndexes(int numberOfHoles, int holeWidth, int index, int lineNumber) {
+    printf("\n");
+    int next;
+    if (lineNumber == 2) {
+        next = 1;
+    }
+    else if (lineNumber == 1){
+        next = -1;
+    }
+    for (int i=0; i<numberOfHoles/2; i++) {
+        
+        printf(" ");
+        
+        // the number of characters the number of seeds take
+        int numberPlaces;
+        if ((index + i*next) <= 9) {
+            numberPlaces = 1;
+        }
+        else if((index + i*next) >= 10) {
+            numberPlaces = 2;
+        }
+
+
+        int numberSpacesAfter;
+        if ((holeWidth - numberPlaces)%2 == 0) {
+            numberSpacesAfter = 0;
+        }
+        else {
+            numberSpacesAfter = 1;
+        }
+
+        // showing the hole
+        for (int j=0; j<(holeWidth - numberPlaces)/2; j++) {
+            printf(" ");
+        }
+        printf("%d", (index + i*next));
+        for (int j=0; j<(holeWidth - numberPlaces)/2 + numberSpacesAfter; j++) {
+            printf(" ");
+        }
+    }
+    printf("     indexes\n");
+}
+
+/*
+Line number indicates if we're printing the row of holes of the opponent (lineNumber 1) or ours (lineNumber 2)
+*/
 void printHoles(int*holes, int numberOfHoles, int holeWidth, int index, int lineNumber, char*scoreText, int score) {
     int next;
     if (lineNumber == 2) {
@@ -256,6 +302,8 @@ void showGame(int *holes, int numberOfHoles, int player, int opponentScore, int 
         iMine = 6;
     }
 
+    printIndexes(numberOfHoles, holeWidth, iOpp, 1);
+
     // first line
     printSeparationLine(numberOfHoles, holeWidth);
 
@@ -267,6 +315,8 @@ void showGame(int *holes, int numberOfHoles, int player, int opponentScore, int 
 
     // show my holes
     printHoles(holes, numberOfHoles, holeWidth, iMine, 2, "My score", myScore);
+
+    printIndexes(numberOfHoles, holeWidth, iMine, 2);
 
     printf("\n");
 }
