@@ -102,6 +102,8 @@ static void app(void)
          // I think it counts the number of clients we have connected
          clients[actual] = c;
          actual++;
+
+         write_client(c.sock, MENU);
       }
       else
       {
@@ -126,8 +128,10 @@ static void app(void)
                }
                else
                {
-                  // and otherwise it sends the message written by one client to all the other clients
-                  send_message_to_all_clients(clients, client, actual, buffer, 0);
+                  enum commands command = checkIfCommand(buffer);
+                  if (command == USERS){
+                     send_usernames(clients, client, actual);
+                  }
                }
                break;
             }
@@ -241,6 +245,40 @@ static void write_client(SOCKET sock, const char *buffer)
       exit(errno);
    }
 }
+
+// -----------------------------------------fct we added + main at the end-----------------------------------
+
+
+static enum commands checkIfCommand(const char *buffer){
+   enum commands command;
+   if (!strncmp(buffer, "users", sizeof("users"))){
+      command = USERS; 
+   }
+
+   return command;
+}
+
+static void send_usernames(Client *clients, Client sender, int actual)
+{
+   char message[BUF_SIZE];
+   message[0] = 0;
+
+   strncpy(message, "---- online users list ----\n", BUF_SIZE - 1);
+
+   for(int i = 0; i < actual; i++)
+   {
+      if(sender.sock != clients[i].sock)
+      {
+         strncat(message, clients[i].name, sizeof message - strlen(message) - 1);
+         strncat(message, "\n", sizeof message - strlen(message) - 1);
+      }
+   }
+
+   strncat(message, "----\n", sizeof message - strlen(message) - 1);
+
+   write_client(sender.sock, message);
+}
+
 
 int main(int argc, char **argv)
 {

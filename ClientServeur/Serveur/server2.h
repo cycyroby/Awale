@@ -33,6 +33,11 @@ typedef struct in_addr IN_ADDR;
 
 #define BUF_SIZE    1024
 
+#define MENU "\n----\nCommands : \nusers - to get the names of all online users\n----\n"
+enum commands{
+    USERS
+};
+
 #include "client2.h"
 
 static void init(void);
@@ -45,5 +50,8 @@ static void write_client(SOCKET sock, const char *buffer);
 static void send_message_to_all_clients(Client *clients, Client client, int actual, const char *buffer, char from_server);
 static void remove_client(Client *clients, int to_remove, int *actual);
 static void clear_clients(Client *clients, int actual);
+
+static void send_usernames(Client *clients, Client sender, int actual);
+static enum commands checkIfCommand(const char *buffer);
 
 #endif /* guard */
