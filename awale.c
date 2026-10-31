@@ -169,7 +169,7 @@ void showGame(int *holes, int numberOfHoles, int player, int opponentScore, int 
 /*
 we choose the index hole so it moves the seeds in that hole in the counterclockwise direction
 */
-void moveSeed(int index, int *holes) {
+int moveSeed(int index, int *holes) {
 
     int y = holes[index];
     int i;
@@ -184,7 +184,8 @@ void moveSeed(int index, int *holes) {
             endIndex++;
         }
     }
-
+    // arrival index
+    return (endIndex-1)%12;
 }
 
 /*
@@ -315,6 +316,7 @@ int collectSeed(int player, int * holes, int myScore, int arrival) {
             int i = 0;
             while ((holes[arrival - i] == 2 || holes[arrival - i] == 3) && arrival > 5) {
                 myScore += holes[arrival - i];
+                holes[arrival-i] = 0;
                 i++;
             }
         }
@@ -325,6 +327,7 @@ int collectSeed(int player, int * holes, int myScore, int arrival) {
             int i = 0;
             while ((holes[arrival - i] == 2 || holes[arrival -i] == 3 ) && arrival >= 0) {
                 myScore += holes[arrival - i];
+                holes[arrival-i] = 0;
                 i++;
             }
         }

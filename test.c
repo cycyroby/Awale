@@ -53,16 +53,21 @@ void moveSeedTest() {
 
     int * holes;
     int numberOfHoles = 12;
+    int arrivalIndex;
     holes = malloc(sizeof(int)*numberOfHoles);
     initGame(holes, numberOfHoles);
     holes[2] = 13;
 
     showGame(holes, numberOfHoles, 1, 0, 0);
     printf("Move the seeds from my third hole\n");
-    moveSeed(2, holes);
+    arrivalIndex = moveSeed(2, holes);
+    printf("The arrival index should be 4\n");
+    printf("The arrival index is %d\n", arrivalIndex);
     showGame(holes, numberOfHoles, 1, 0, 0);
     printf("Move the seeds from my third hole - it shouldn't change anything since there are no more seeds in that hole\n");
-    moveSeed(2, holes);
+    arrivalIndex = moveSeed(2, holes);
+    printf("The arrival index should be 2\n");
+    printf("The arrival index is %d\n", arrivalIndex);
     showGame(holes, numberOfHoles, 1, 0, 0);
 
     printf("-----end of move Seed test-------------------------------------------------------------------------\n\n");
@@ -156,7 +161,7 @@ void canFeedTest() {
         printf("There are no possible holes\n");
     }
 
-    //----------------------------
+    printf("----------------------------\n");
     for (int i=0; i<numberOfHoles; i++){
         possibleHoles[i] = -1;
     }
@@ -192,7 +197,7 @@ void canFeedTest() {
         printf("There are no possible holes\n");
     }
 
-    //----------------------------
+    printf("----------------------------\n");
     for (int i=0; i<numberOfHoles; i++){
         possibleHoles[i] = -1;
     }
@@ -259,7 +264,7 @@ void gameFinishedTest() {
     }
     printf("\n");
 
-    //----------------------------
+    printf("----------------------------\n");
     myScore = 27;
     opponentScore = 0;
     holes[0] = 0;
@@ -281,7 +286,7 @@ void gameFinishedTest() {
     }
     printf("\n");
 
-    //----------------------------
+    printf("----------------------------\n");
     myScore = 0;
     opponentScore = 0;
     holes[0] = 0;
@@ -312,28 +317,83 @@ void collectSeedTest() {
     int numberOfHoles = 12;
     int * holes = malloc(sizeof(int)*numberOfHoles);
 
-    int myScore = 0;
-    int opponentScore = 0;
-    int playerNumber = 2;
+    int myScore;
+    int opponentScore;
+    int playerNumber;
 
+    myScore = 0;
+    opponentScore = 0;
+    playerNumber = 1;
     holes[0] = 0;
     holes[1] = 0;
     holes[2] = 0;
     holes[3] = 0;
     holes[4] = 0;
     holes[5] = 0;
-    holes[6] = 0;
+    holes[6] = 2;
     holes[7] = 2;
-    holes[8] = 1;
-    holes[9] = 3;
-    holes[10] = 2;
+    holes[8] = 2;
+    holes[9] = 0;
+    holes[10] = 0;
     holes[11] = 0;
 
     showGame(holes, numberOfHoles, playerNumber, opponentScore, myScore);
 
-    myScore = collectSeed(playerNumber, holes, myScore, 10);
+    myScore = collectSeed(playerNumber, holes, myScore, 8);
 
-    printf("My new score should be : %d, and it is : %d\n",myScore+holes[10], myScore);
+    printf("I arrived at index 8\n");
+    printf("My new score should be : %d\n",6);
+    showGame(holes, numberOfHoles, playerNumber, opponentScore, myScore);
+
+    printf("----------------------------\n");
+    myScore = 0;
+    opponentScore = 0;
+    playerNumber = 1;
+    holes[0] = 0;
+    holes[1] = 0;
+    holes[2] = 0;
+    holes[3] = 0;
+    holes[4] = 0;
+    holes[5] = 0;
+    holes[6] = 2;
+    holes[7] = 2;
+    holes[8] = 4;
+    holes[9] = 0;
+    holes[10] = 0;
+    holes[11] = 0;
+
+    showGame(holes, numberOfHoles, playerNumber, opponentScore, myScore);
+
+    myScore = collectSeed(playerNumber, holes, myScore, 8);
+
+    printf("I arrived at index 8\n");
+    printf("My new score should be : %d\n",0);
+    showGame(holes, numberOfHoles, playerNumber, opponentScore, myScore);
+
+    printf("----------------------------\n");
+    myScore = 0;
+    opponentScore = 0;
+    playerNumber = 1;
+    holes[0] = 0;
+    holes[1] = 0;
+    holes[2] = 0;
+    holes[3] = 0;
+    holes[4] = 0;
+    holes[5] = 0;
+    holes[6] = 2;
+    holes[7] = 4;
+    holes[8] = 3;
+    holes[9] = 0;
+    holes[10] = 0;
+    holes[11] = 0;
+
+    showGame(holes, numberOfHoles, playerNumber, opponentScore, myScore);
+
+    myScore = collectSeed(playerNumber, holes, myScore, 8);
+
+    printf("I arrived at index 8\n");
+    printf("My new score should be : %d\n",3);
+    showGame(holes, numberOfHoles, playerNumber, opponentScore, myScore);
 
     printf("-----end of collect Seed test-------------------------------------------------------------------------\n\n");
 }
