@@ -265,17 +265,45 @@ bool canFeed(int player, int * holes, int* possibleHoles) {
 
 }
 
-/*
+/*returns true if the game is done because one won't be able to have any more seeds (is hungry and can't be fed)*/
+bool isGameFinishedHunger(int * holes) {
+    int player;
+    int*possibleHoles;
+    if (hasToBeFed(1, holes)){
+        player = 1;
+        // if both have to be fed
+        if(hasToBeFed(2, holes)){
+            return true;
+        }
+        possibleHoles = malloc(sizeof(int)*12);
+        return !canFeed(player, holes, possibleHoles);
+    }
+    else if (hasToBeFed(2, holes)){
+        player = 2;
+        possibleHoles = malloc(sizeof(int)*12);
+        return !canFeed(player, holes, possibleHoles);
+    }
+}
 
+/*returns true if the game is done because one player has 25 or more points*/
+bool isGameFinishedScore(int*holes, int myScore, int opponentScore){
+    return (myScore>=25 || opponentScore>=25);
+}
+
+/*
+returns true if the game is done and prints why it is done
+// we're not doing the we can't capture any seeds finishing rule for the moment
 */
-bool isGameFinished(int player, int * holes) {
-    int*possibleHoles = malloc(sizeof(int)*12);
-    if (canFeed(player, holes, possibleHoles)) {
-        return false;
+bool isGameFinished(int * holes, int myScore, int opponentScore) {
+    bool score = isGameFinishedScore(holes, myScore, opponentScore);
+    bool hunger = isGameFinishedHunger(holes);
+    if (score){
+        printf("One of the players has more than 25 points !\n");
     }
-    else {
-        return true;
+    if (hunger){
+        printf("One of the players can't have any more seeds to continue playing !\n");
     }
+    return score||hunger;
 }
 
 /*
