@@ -33,7 +33,11 @@ typedef struct in_addr IN_ADDR;
 
 #define BUF_SIZE    1024
 
-#define MENU "\n----\nCommands : \nusers - to get the names of all online users\n----\n"
+#define MENU    "\n----\n \
+Commands : \n \
+users                - to get the names of all online users\n \
+challenge [username] - to challenge this username to a game. They can either accept or reject the challenge\n \
+----\n"
 enum commands{
     USERS
 };
