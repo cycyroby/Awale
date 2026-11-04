@@ -172,20 +172,25 @@ we choose the index hole so it moves the seeds in that hole in the counterclockw
 int moveSeed(int index, int *holes) {
 
     int y = holes[index];
-    int i;
-    int endIndex = index+y+1;
+    if (y != 0) {
+        int i;
+        int endIndex = index+y+1;
 
-    for (i = index+1; i < endIndex; i++){
-        if (i%12 != index){
-            holes[i%12] = holes[i%12] + 1;
-            holes[index] -= 1;
+        for (i = index+1; i < endIndex; i++){
+            if (i%12 != index){
+                holes[i%12] = holes[i%12] + 1;
+                holes[index] -= 1;
+            }
+            else{
+                endIndex++;
+            }
         }
-        else{
-            endIndex++;
-        }
+        // arrival index
+        return (endIndex-1)%12;
     }
-    // arrival index
-    return (endIndex-1)%12;
+    else {
+        return -1;
+    }
 }
 
 /*

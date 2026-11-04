@@ -66,7 +66,7 @@ void moveSeedTest() {
     showGame(holes, numberOfHoles, 1, 0, 0);
     printf("Move the seeds from my third hole - it shouldn't change anything since there are no more seeds in that hole\n");
     arrivalIndex = moveSeed(2, holes);
-    printf("The arrival index should be 2\n");
+    printf("The arrival index should be -1 because you can't play an empty hole\n");
     printf("The arrival index is %d\n", arrivalIndex);
     showGame(holes, numberOfHoles, 1, 0, 0);
 
