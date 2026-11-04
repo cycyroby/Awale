@@ -290,7 +290,6 @@ static int check_usernames(Client *clients, Client sender, int actual){
    message[0] = 0;
    for(int i = 0; i < actual; i++)
    {
-      printf("%s, %s", sender.name, clients[i].name);
       if(strncmp(sender.name, clients[i].name, sizeof(sender.name))==0)
       {
 
@@ -302,6 +301,18 @@ static int check_usernames(Client *clients, Client sender, int actual){
 
    return 0;
 }
+
+static Client get_client_by_username(const char* name, Client *clients, int actual){
+   if (actual >0) {
+      for(int i = 0; i < actual; i++){
+         if(strncmp(name, clients[i].name, sizeof(name))==0){
+            return clients[i];
+         }
+      }
+   }
+   return NULL;
+}
+
 
 
 

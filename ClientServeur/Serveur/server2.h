@@ -59,4 +59,6 @@ static void send_usernames(Client *clients, Client sender, int actual);
 static enum commands checkIfCommand(const char *buffer);
 static int check_usernames(Client *clients, Client sender, int actual);
 
+static Client get_client_by_username(const char* name, Client *clients, int actual);
+
 #endif /* guard */
