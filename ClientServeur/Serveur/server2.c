@@ -142,7 +142,7 @@ static void app(void)
                      send_usernames(clients, client, actual);
                   }
                   else if (command == CHALLENGE) {
-                     printf("commandName:%s, parameter:%s\n", commandName, parameter);
+                     send_challenge(get_client_by_username(parameter, clients, actual),client);
                   }
                }
                break;
@@ -344,7 +344,31 @@ static Client get_client_by_username(const char* name, Client *clients, int actu
          }
       }
    }
-   return NULL;
+}
+
+static void send_challenge(Client client, Client sender){
+   char message[BUF_SIZE];
+   message[0] = 0;
+   strncpy(message, sender.name, BUF_SIZE - 1);
+   strncat(message, " \
+wants to challenge you to a awale-game. \nDo you want to accept the challenge ?\n\
+Please write 'accept' if you do and 'reject' if you don't.\n", sizeof message - strlen(message) - 1);
+
+   
+   write_client(client.sock, message);
+}
+
+static int get_response_challenge(Client client){
+   char accept[BUF_SIZE];
+   accept[0] = 0;
+   strncpy(accept, "accept", BUF_SIZE-1);
+   char buffer[BUF_SIZE];
+   read_client(client.sock, buffer);
+   if (strncmp(buffer, accept, sizeof(buffer))==0){
+      return 1;
+   }
+
+   return 0;
 }
 
 

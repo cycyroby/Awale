@@ -29,9 +29,9 @@ typedef struct in_addr IN_ADDR;
 
 #define CRLF        "\r\n"
 #define PORT         1977
-#define MAX_CLIENTS     100
+#define MAX_CLIENTS  100
 
-#define BUF_SIZE    1024
+#define BUF_SIZE     1024
 
 #define MENU    "\n----\n \
 Commands : \n \
@@ -62,5 +62,7 @@ static char* separateCommandParameter(const char* buffer, char* commandName, cha
 static int check_usernames(Client *clients, Client sender, int actual);
 
 static Client get_client_by_username(const char* name, Client *clients, int actual);
+static void send_challenge(Client client, Client sender);
+static int get_response_challenge(Client client);
 
 #endif /* guard */
