@@ -99,9 +99,15 @@ static void app(void)
 
          Client c = { csock };
          strncpy(c.name, buffer, BUF_SIZE - 1);
+
+         if (check_usernames(clients, c, actual) == 1) {
+            read_client(c.sock, buffer);
+            strncpy(c.name, buffer, BUF_SIZE - 1);
+         }
          // I think it counts the number of clients we have connected
          clients[actual] = c;
          actual++;
+         
 
          write_client(c.sock, MENU);
       }
@@ -278,6 +284,25 @@ static void send_usernames(Client *clients, Client sender, int actual)
 
    write_client(sender.sock, message);
 }
+
+static int check_usernames(Client *clients, Client sender, int actual){
+   char message[BUF_SIZE];
+   message[0] = 0;
+   for(int i = 0; i < actual; i++)
+   {
+      printf("%s, %s", sender.name, clients[i].name);
+      if(strncmp(sender.name, clients[i].name, sizeof(sender.name))==0)
+      {
+
+         strncpy(message, "username already used, write a new one\n", BUF_SIZE - 1);
+         write_client(sender.sock, message);
+         return 1;
+      }
+   }
+
+   return 0;
+}
+
 
 
 int main(int argc, char **argv)
