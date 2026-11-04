@@ -39,7 +39,8 @@ users                - to get the names of all online users\n \
 challenge [username] - to challenge this username to a game. They can either accept or reject the challenge\n \
 ----\n"
 enum commands{
-    USERS
+    USERS,
+    CHALLENGE
 };
 
 #include "client2.h"
@@ -57,6 +58,7 @@ static void clear_clients(Client *clients, int actual);
 
 static void send_usernames(Client *clients, Client sender, int actual);
 static enum commands checkIfCommand(const char *buffer);
+static char* separateCommandParameter(const char* buffer, char* commandName, char*parameter);
 static int check_usernames(Client *clients, Client sender, int actual);
 
 static Client get_client_by_username(const char* name, Client *clients, int actual);

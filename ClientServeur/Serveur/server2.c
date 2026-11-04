@@ -134,9 +134,15 @@ static void app(void)
                }
                else
                {
-                  enum commands command = checkIfCommand(buffer);
+                  char* commandName = malloc(BUF_SIZE*sizeof(char));
+                  char* parameter = malloc(BUF_SIZE*sizeof(char));
+                  parameter = separateCommandParameter(buffer, commandName, parameter);
+                  enum commands command = checkIfCommand(commandName);
                   if (command == USERS){
                      send_usernames(clients, client, actual);
+                  }
+                  else if (command == CHALLENGE) {
+                     printf("commandName:%s, parameter:%s\n", commandName, parameter);
                   }
                }
                break;
@@ -254,11 +260,39 @@ static void write_client(SOCKET sock, const char *buffer)
 
 // -----------------------------------------fct we added + main at the end-----------------------------------
 
+static char* separateCommandParameter(const char* buffer, char* commandName, char*parameter) {
+   commandName[0] = 0;
+   parameter[0] = 0;
 
-static enum commands checkIfCommand(const char *buffer){
+   strncpy(commandName, buffer, BUF_SIZE - 1);
+   strncpy(parameter, buffer, BUF_SIZE - 1);
+   char* ptrCmd = commandName;
+   char* ptrPar = parameter;
+
+   while(*ptrCmd != ' ' && *ptrCmd != '\0') {
+      ptrCmd++;
+      ptrPar++;
+   }
+   if (*ptrCmd == ' ') {
+      ptrPar++;
+   }
+   else if (*ptrCmd == '\0') {
+      ptrPar[0] = 0;
+      strncpy(ptrPar, "", BUF_SIZE - 1);
+   }
+   *ptrCmd = 0;
+   parameter = ptrPar;
+   return parameter;
+}
+
+static enum commands checkIfCommand(const char *commandSent){
    enum commands command;
-   if (!strncmp(buffer, "users", sizeof("users"))){
+
+   if (!strncmp(commandSent, "users", sizeof("users"))){
       command = USERS; 
+   }
+   else if (!strncmp(commandSent, "challenge", sizeof("challenge"))) {
+      command = CHALLENGE;
    }
 
    return command;
