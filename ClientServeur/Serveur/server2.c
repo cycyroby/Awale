@@ -5,6 +5,7 @@
 
 #include "server2.h"
 #include "client2.h"
+#include "../../awale.c"
 
 static void init(void)
 {
@@ -215,6 +216,10 @@ static void app(void)
                      }
                      write_client((*senderClient).sock, message);
                   }
+
+                 /* else if (command == SHOW) {
+                     strcpy(message, "The first command is 'move [number]' which means you want to move the seeds from one of your holes");
+                  }*/
                }
                break;
             }
@@ -376,6 +381,12 @@ static enum commands checkIfCommand(const char *commandSent){
    else if (!strncmp(commandSent, "reject", sizeof("reject"))) {
       command = REJECT;
    }
+   else if (!strncmp(commandSent, "move", sizeof("challenge"))) {
+      command = MOVE;
+   }
+   else if (!strncmp(commandSent, "showCommands", sizeof("showCommands"))) {
+      command = SHOW;
+   }
 
    return command;
 }
@@ -460,6 +471,21 @@ static void get_answer_challenge(enum commands command, Client * sender, Client 
          (*sender).state = PLAYING;
          (*opponent).state = PLAYING;
          write_client((*opponent).sock, "Your challenge has been accepted.\n");
+         int * holes;
+         int numberOfHoles = 12;
+         holes = malloc(sizeof(int)*numberOfHoles);
+         initGame(holes, numberOfHoles);
+         int player = get_random_player_one();
+         int opponentScore = 0;
+         int myScore = 0;
+         showGame(holes, numberOfHoles, player, opponentScore, myScore, sender);
+         if (player == 1) {
+            player = 2;
+         }
+         else {
+            player = 1;
+         }
+         showGame(holes, numberOfHoles, player, opponentScore, myScore, opponent);
       }
       // the client answered reject
       else if (command == REJECT){
@@ -476,6 +502,17 @@ static void get_answer_challenge(enum commands command, Client * sender, Client 
 // write anything exept accept, reject or disconnect
 // the challenger cannot challenge another person
 // others cannot challenge the two
+
+static int get_random_player_one() {
+   //This will give 1 if the challenger is gonna be player one and 2 if he's gonna be player two.
+   int n = rand()%2;
+   n++;
+   return n;
+}
+
+void show(char *message, Client *sender) {
+   write_client((*sender).sock, message);
+}
 
 
 int main(int argc, char **argv)

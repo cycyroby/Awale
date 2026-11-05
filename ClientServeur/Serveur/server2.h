@@ -37,12 +37,15 @@ typedef struct in_addr IN_ADDR;
 Commands : \n \
 users                - to get the names of all online users\n \
 challenge [username] - to challenge this username to a game. They can either accept or reject the challenge\n \
+showCommandes        - to show all the commands for the game\n \
 ----\n"
 enum commands{
     USERS,
     CHALLENGE,
     ACCEPT,
-    REJECT
+    REJECT,
+    MOVE,
+    SHOW
 };
 
 #include "client2.h"
@@ -67,4 +70,6 @@ static Client* get_client_by_username(const char* name, Client *clients, int act
 static void send_challenge(Client* client, Client* sender);
 static void get_answer_challenge(enum commands command, Client * sender, Client *clients, int actual);
 
+static int get_random_player_one();
+void show(char *message, Client *sender);
 #endif /* guard */

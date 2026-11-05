@@ -1,6 +1,9 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#include <string.h>
+
+#include "ClientServeur/Serveur/client2.h"
 
 /*
 initialise the game with 4 seeds in each hole
@@ -15,22 +18,22 @@ void initGame(int *holes, int numberOfHoles) {
 /*
 used in show game to make the separation line
 */
-void printSeparationLine(int numberOfHoles, int holeWidth){
+void printSeparationLine(char *message, int numberOfHoles, int holeWidth){
     // separation line
     for (int i=0; i<numberOfHoles/2; i++) {
-        printf(" ");
+        strcat(message, " ");
         for (int j=0; j<holeWidth; j++) {
-            printf("_");
+            strcat(message, "_");
         }
     }
-    printf("\n");
+    strcat(message, "\n");
 }
 
 /*
 Line number indicates if we're printing the row of holes of the opponent (lineNumber 1) or ours (lineNumber 2)
 */
-void printIndexes(int numberOfHoles, int holeWidth, int index, int lineNumber) {
-    printf("\n");
+void printIndexes(char *message, int numberOfHoles, int holeWidth, int index, int lineNumber) {
+    strcat(message, "\n");
     int next;
     if (lineNumber == 2) {
         next = 1;
@@ -40,7 +43,7 @@ void printIndexes(int numberOfHoles, int holeWidth, int index, int lineNumber) {
     }
     for (int i=0; i<numberOfHoles/2; i++) {
         
-        printf(" ");
+        strcat(message, " ");
         
         // the number of characters the number of seeds take
         int numberPlaces;
@@ -62,20 +65,23 @@ void printIndexes(int numberOfHoles, int holeWidth, int index, int lineNumber) {
 
         // showing the hole
         for (int j=0; j<(holeWidth - numberPlaces)/2; j++) {
-            printf(" ");
+            strcat(message, " ");
         }
-        printf("%d", (index + i*next));
+        int result = index + (i*next);
+        char temp[20];
+        sprintf(temp, "%d", result);
+        strcat(message, temp);
         for (int j=0; j<(holeWidth - numberPlaces)/2 + numberSpacesAfter; j++) {
-            printf(" ");
+            strcat(message, " ");
         }
     }
-    printf("     indexes\n");
+    strcat(message, "     indexes\n");
 }
 
 /*
 Line number indicates if we're printing the row of holes of the opponent (lineNumber 1) or ours (lineNumber 2)
 */
-void printHoles(int*holes, int numberOfHoles, int holeWidth, int index, int lineNumber, char*scoreText, int score) {
+void printHoles(char *message, int*holes, int numberOfHoles, int holeWidth, int index, int lineNumber, char*scoreText, int score) {
     int next;
     if (lineNumber == 2) {
         next = 1;
@@ -84,7 +90,7 @@ void printHoles(int*holes, int numberOfHoles, int holeWidth, int index, int line
         next = -1;
     }
     for (int i=0; i<numberOfHoles/2; i++) {
-        printf("|");
+        strcat(message, "|");
         int numberOfSeeds = holes[index + i*next];
         
         // the number of characters the number of seeds take
@@ -107,14 +113,22 @@ void printHoles(int*holes, int numberOfHoles, int holeWidth, int index, int line
 
         // showing the hole
         for (int j=0; j<(holeWidth - numberPlaces)/2; j++) {
-            printf("_");
+            strcat(message, "_");
         }
-        printf("%d", numberOfSeeds);
+        char nOfS_char[20];
+        sprintf(nOfS_char, "%d", numberOfSeeds);
+        strcat(message, nOfS_char);
         for (int j=0; j<(holeWidth - numberPlaces)/2 + numberSpacesAfter; j++) {
-            printf("_");
+            strcat(message, "_");
         }
     }
-    printf("|    %s : %d\n", scoreText, score);
+    strcat(message, "|    ");
+    strcat(message, scoreText);
+    strcat(message," : ");
+    char score_char[20];
+    sprintf(score_char, "%d", score);
+    strcat(message, score_char);
+    strcat(message, "\n");
 }
 
 /* 
@@ -132,7 +146,7 @@ void printHoles(int*holes, int numberOfHoles, int holeWidth, int index, int line
   ___________ ___________ ___________ ___________ ___________ ___________ 
  |_holes[6]__|_holes[7]__|_holes[8]__|_holes[9]__|_holes[10]_|_holes[11]_| player 2
  */
-void showGame(int *holes, int numberOfHoles, int player, int opponentScore, int myScore) {
+void showGame(int *holes, int numberOfHoles, int player, int opponentScore, int myScore, Client *sender) {
     int holeWidth = 4;
 
     int iOpp;
@@ -147,24 +161,33 @@ void showGame(int *holes, int numberOfHoles, int player, int opponentScore, int 
         iMine = 6;
     }
 
-    printIndexes(numberOfHoles, holeWidth, iOpp, 1);
+    char *message = malloc(BUF_SIZE * sizeof(char));
+    message[0] = '\0';
+    strcpy(message, "GAME : \n");
+    printIndexes(message, numberOfHoles, holeWidth, iOpp, 1);
 
     // first line
-    printSeparationLine(numberOfHoles, holeWidth);
+    printSeparationLine(message, numberOfHoles, holeWidth);
+
 
     // show opponnent's holes
-    printHoles(holes, numberOfHoles, holeWidth, iOpp, 1, "Opponent's score", opponentScore);
+    printHoles(message, holes, numberOfHoles, holeWidth, iOpp, 1, "Opponent's score", opponentScore);
+
 
     // second separation line
-    printSeparationLine(numberOfHoles, holeWidth);
+    printSeparationLine(message, numberOfHoles, holeWidth);
 
     // show my holes
-    printHoles(holes, numberOfHoles, holeWidth, iMine, 2, "My score", myScore);
+    printHoles(message, holes, numberOfHoles, holeWidth, iMine, 2, "My score", myScore);
 
-    printIndexes(numberOfHoles, holeWidth, iMine, 2);
+    printIndexes(message, numberOfHoles, holeWidth, iMine, 2);
 
-    printf("\n");
+    strcat(message, "\n");
+
+
+    show(message, sender);
 }
+
 
 /*
 we choose the index hole so it moves the seeds in that hole in the counterclockwise direction
