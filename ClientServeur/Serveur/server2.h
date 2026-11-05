@@ -40,7 +40,9 @@ challenge [username] - to challenge this username to a game. They can either acc
 ----\n"
 enum commands{
     USERS,
-    CHALLENGE
+    CHALLENGE,
+    ACCEPT,
+    REJECT
 };
 
 #include "client2.h"
@@ -52,7 +54,7 @@ static int init_connection(void);
 static void end_connection(int sock);
 static int read_client(SOCKET sock, char *buffer);
 static void write_client(SOCKET sock, const char *buffer);
-static void send_message_to_all_clients(Client *clients, Client client, int actual, const char *buffer, char from_server);
+static void send_message_to_all_clients(Client *clients, Client *client, int actual, const char *buffer, char from_server);
 static void remove_client(Client *clients, int to_remove, int *actual);
 static void clear_clients(Client *clients, int actual);
 
@@ -61,8 +63,8 @@ static enum commands checkIfCommand(const char *buffer);
 static char* separateCommandParameter(const char* buffer, char* commandName, char*parameter);
 static int check_usernames(Client *clients, Client sender, int actual);
 
-static Client get_client_by_username(const char* name, Client *clients, int actual);
-static void send_challenge(Client client, Client sender);
-static int get_response_challenge(Client client);
+static Client* get_client_by_username(const char* name, Client *clients, int actual);
+static void send_challenge(Client* client, Client* sender);
+static void get_answer_challenge(enum commands command, Client * sender, Client *clients, int actual);
 
 #endif /* guard */

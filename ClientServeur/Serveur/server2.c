@@ -104,6 +104,8 @@ static void app(void)
             read_client(c.sock, buffer);
             strncpy(c.name, buffer, BUF_SIZE - 1);
          }
+         c.state = OTHER;
+         printf("init client state: %d\n" ,c.state);
          // I think it counts the number of clients we have connected
          clients[actual] = c;
          actual++;
@@ -120,17 +122,28 @@ static void app(void)
             /* a client is talking */
             if(FD_ISSET(clients[i].sock, &rdfs))
             {
-               Client client = clients[i];
+               printf("client talking : name-%s, opponent-%s, state-%d\n", clients[i].name, clients[i].opponent, clients[i].state);
+               Client* senderClient = &(clients[i]);
                int c = read_client(clients[i].sock, buffer);
                /* client disconnected */
                if(c == 0)
                {
+                  if ((*senderClient).state == CHALLENGED || (*senderClient).state == CHALLENGING) {
+                     Client* opponent = get_client_by_username((*senderClient).opponent, clients, actual);
+                     (*opponent).state = OTHER;
+                     strcpy((*opponent).opponent, "");
+                  }
+                  else if ((*senderClient).state == PLAYING) {
+                     Client* opponent = get_client_by_username((*senderClient).opponent, clients, actual);
+                     // à compléter.........
+                  }
+
                   // I think this tells the other clients that "name of client" disconnected
+                  strncpy(buffer, (*senderClient).name, BUF_SIZE - 1);
+                  strncat(buffer, " disconnected !", BUF_SIZE - strlen(buffer) - 1);
+                  send_message_to_all_clients(clients, senderClient, actual, buffer, 1);
                   closesocket(clients[i].sock);
                   remove_client(clients, i, &actual);
-                  strncpy(buffer, client.name, BUF_SIZE - 1);
-                  strncat(buffer, " disconnected !", BUF_SIZE - strlen(buffer) - 1);
-                  send_message_to_all_clients(clients, client, actual, buffer, 1);
                }
                else
                {
@@ -138,11 +151,69 @@ static void app(void)
                   char* parameter = malloc(BUF_SIZE*sizeof(char));
                   parameter = separateCommandParameter(buffer, commandName, parameter);
                   enum commands command = checkIfCommand(commandName);
+                  
+                  char message[BUF_SIZE];
+                  message[0] = 0;
+
                   if (command == USERS){
-                     send_usernames(clients, client, actual);
+                     printf("in users\n");
+                     send_usernames(clients, (*senderClient), actual);
+                     if ((*senderClient).state == CHALLENGED) {
+                        printf("in users challe\n");
+                        strcpy(message, "Don't forget to either accept or reject ");
+                        strcat(message, (*senderClient).opponent);
+                        strcat(message, "'s challenge\n");
+                     }
+                     write_client((*senderClient).sock, message);
                   }
+
                   else if (command == CHALLENGE) {
-                     send_challenge(get_client_by_username(parameter, clients, actual),client);
+                     Client* receiver = get_client_by_username(parameter, clients, actual);
+
+                     if ((*senderClient).state == CHALLENGED) {
+                        strcpy(message, "You have already been challenged. You can either 'accept' or 'reject'.\n");
+                     }
+                     else if ((*senderClient).state == CHALLENGING) {
+                        strcpy(message, "You have already challenged ");
+                        strcat(message, (*senderClient).opponent);
+                        strcat(message, ". Wait patiently until they either accept or refuse your challenge.\n");
+                     }
+                     else if ((*senderClient).state == PLAYING) {
+                        strcpy(message, "You are already playing a game. You cannot challenge another person.\n");
+                     }
+                     else if ((*senderClient).state == OTHER) {
+                        // if we actually found a client (the name isn't "")
+                        printf("in challe before check receiver is client\n");
+                        //if (strcmp((*receiver).name, "") != 0) {
+                        if (receiver != NULL) {
+                           printf("in challe after check receiver is client\n");
+                           if ((*receiver).state == OTHER) {
+                              send_challenge(receiver, senderClient);
+                              printf(" after send challenge : %s as %d from %s as %d\n",(*senderClient).opponent, (*receiver).state, (*receiver).opponent, (*senderClient).state);
+                              strcpy(message, "");
+                           }
+                           else {
+                              strcpy(message, "The user you are trying to challenge has either challenged someone else, has been challenged or is playing. Thus they cannot be challenged at the moment.\n");
+                           }
+                        }
+                        else {
+                           strcpy(message, "The user you challenged isn't online or doesn't exist :(\n");
+                        } 
+                     }  
+                     write_client((*senderClient).sock, message);
+                     printf("in challe message sent\n");                  
+                  }
+                  else if(command == ACCEPT || command == REJECT) {
+                     printf("in accept or reject, opponent : %s, state : %d we want 2\n", (*senderClient).opponent, (*senderClient).state);
+                     if ((*senderClient).state == CHALLENGED) {
+                        printf("in accept rej challe\n");
+                        get_answer_challenge(command, senderClient, clients, actual);
+                     }
+                     else {
+                        printf("in accept rej not challe\n");
+                        strcpy(message, "Command not recognized. You have not been challenged.\n");
+                     }
+                     write_client((*senderClient).sock, message);
                   }
                }
                break;
@@ -150,6 +221,10 @@ static void app(void)
          }
       }
    }
+   // what should happen when a person is challenged is that others can continue their life and the challenged cannot 
+// write anything exept accept, reject or disconnect
+// the challenger cannot challenge another person
+// others cannot challenge the two
 
    clear_clients(clients, actual);
    end_connection(sock);
@@ -172,22 +247,23 @@ static void remove_client(Client *clients, int to_remove, int *actual)
    (*actual)--;
 }
 
-static void send_message_to_all_clients(Client *clients, Client sender, int actual, const char *buffer, char from_server)
+static void send_message_to_all_clients(Client *clients, Client *sender, int actual, const char *buffer, char from_server)
 {
-   int i = 0;
    char message[BUF_SIZE];
    message[0] = 0;
-   for(i = 0; i < actual; i++)
+
+   if(from_server == 0)
+   {
+      strncpy(message, (*sender).name, BUF_SIZE - 1);
+      strncat(message, " : ", sizeof message - strlen(message) - 1);
+   }
+   strncat(message, buffer, sizeof message - strlen(message) - 1);
+
+   for(int i = 0; i < actual; i++)
    {
       /* we don't send message to the sender */
-      if(sender.sock != clients[i].sock)
+      if((*sender).sock != clients[i].sock)
       {
-         if(from_server == 0)
-         {
-            strncpy(message, sender.name, BUF_SIZE - 1);
-            strncat(message, " : ", sizeof message - strlen(message) - 1);
-         }
-         strncat(message, buffer, sizeof message - strlen(message) - 1);
          write_client(clients[i].sock, message);
       }
    }
@@ -294,6 +370,12 @@ static enum commands checkIfCommand(const char *commandSent){
    else if (!strncmp(commandSent, "challenge", sizeof("challenge"))) {
       command = CHALLENGE;
    }
+   else if (!strncmp(commandSent, "accept", sizeof("accept"))) {
+      command = ACCEPT;
+   }
+   else if (!strncmp(commandSent, "reject", sizeof("reject"))) {
+      command = REJECT;
+   }
 
    return command;
 }
@@ -336,42 +418,64 @@ static int check_usernames(Client *clients, Client sender, int actual){
    return 0;
 }
 
-static Client get_client_by_username(const char* name, Client *clients, int actual){
-   if (actual >0) {
+static Client* get_client_by_username(const char* name, Client *clients, int actual){
+   printf("in get user name start\n");
+   if (actual > 0) {
       for(int i = 0; i < actual; i++){
          if(strncmp(name, clients[i].name, sizeof(name))==0){
-            return clients[i];
+            return &(clients[i]);
          }
       }
+      printf("in get user name after for\n");
+      return NULL;
    }
 }
 
-static void send_challenge(Client client, Client sender){
+static void send_challenge(Client* client, Client* sender){
+   strcpy((*client).opponent, (*sender).name);
+   strcpy((*sender).opponent, (*client).name);
+   (*client).state = CHALLENGED;
+   (*sender).state = CHALLENGING;
+   printf("in send challenge after state and oppo bouhhhhhh put\n");
+
+
    char message[BUF_SIZE];
    message[0] = 0;
-   strncpy(message, sender.name, BUF_SIZE - 1);
+   strncpy(message, (*sender).name, BUF_SIZE - 1);
    strncat(message, " \
 wants to challenge you to a awale-game. \nDo you want to accept the challenge ?\n\
 Please write 'accept' if you do and 'reject' if you don't.\n", sizeof message - strlen(message) - 1);
 
    
-   write_client(client.sock, message);
-}
-
-static int get_response_challenge(Client client){
-   char accept[BUF_SIZE];
-   accept[0] = 0;
-   strncpy(accept, "accept", BUF_SIZE-1);
-   char buffer[BUF_SIZE];
-   read_client(client.sock, buffer);
-   if (strncmp(buffer, accept, sizeof(buffer))==0){
-      return 1;
-   }
-
-   return 0;
+   write_client((*client).sock, message);
+   printf("send challenge : %s as %d from %s as %d\n",(*sender).opponent, (*client).state, (*client).opponent, (*sender).state);
 }
 
 
+static void get_answer_challenge(enum commands command, Client * sender, Client * clients, int actual){
+      Client* opponent = get_client_by_username((*sender).opponent, clients, actual);
+      // the client answered accept
+      if (command == ACCEPT){
+         printf("in accept\n");
+         (*sender).state = PLAYING;
+         (*opponent).state = PLAYING;
+         write_client((*opponent).sock, "Your challenge has been accepted.\n");
+      }
+      // the client answered reject
+      else if (command == REJECT){
+         printf("in reject\n");
+         (*sender).state = OTHER;
+         (*opponent).state = OTHER;
+         strcpy((*sender).opponent, "");
+         strcpy((*opponent).opponent, "");
+         write_client((*opponent).sock, "Your challenge has been rejected.\n");
+      }
+}
+
+// what should happen when a person is challenged is that others can continue their life and the challenged cannot 
+// write anything exept accept, reject or disconnect
+// the challenger cannot challenge another person
+// others cannot challenge the two
 
 
 int main(int argc, char **argv)
