@@ -3,7 +3,7 @@
 
 #include "server2.h"
 
-enum state{PLAYING, CHALLENGING, CHALLENGED, OTHER};
+enum state{HAS_TO_PLAY, WAITING_TO_PLAY, CHALLENGING, CHALLENGED, OTHER};
 
 typedef struct
 {
@@ -11,6 +11,9 @@ typedef struct
    char name[BUF_SIZE];
    enum state state;
    char opponent[BUF_SIZE];
+   int player;
+   int *holes;
+   int myScore;
 }Client;
 
 #endif /* guard */

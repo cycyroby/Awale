@@ -7,6 +7,8 @@
 #include "client2.h"
 #include "../../awale.c"
 
+#define numberOfHoles 12
+
 static void init(void)
 {
 #ifdef WIN32
@@ -134,7 +136,7 @@ static void app(void)
                      (*opponent).state = OTHER;
                      strcpy((*opponent).opponent, "");
                   }
-                  else if ((*senderClient).state == PLAYING) {
+                  else if ((*senderClient).state == HAS_TO_PLAY || (*senderClient).state == WAITING_TO_PLAY) {
                      Client* opponent = get_client_by_username((*senderClient).opponent, clients, actual);
                      // à compléter.........
                   }
@@ -179,7 +181,7 @@ static void app(void)
                         strcat(message, (*senderClient).opponent);
                         strcat(message, ". Wait patiently until they either accept or refuse your challenge.\n");
                      }
-                     else if ((*senderClient).state == PLAYING) {
+                     else if ((*senderClient).state == HAS_TO_PLAY || (*senderClient).state == WAITING_TO_PLAY) {
                         strcpy(message, "You are already playing a game. You cannot challenge another person.\n");
                      }
                      else if ((*senderClient).state == OTHER) {
@@ -213,6 +215,37 @@ static void app(void)
                      else {
                         printf("in accept rej not challe\n");
                         strcpy(message, "Command not recognized. You have not been challenged.\n");
+                     }
+                     write_client((*senderClient).sock, message);
+                  }
+                  else if(command == MOVE) {
+                     if((*senderClient).state != HAS_TO_PLAY && (*senderClient).state != WAITING_TO_PLAY) {
+                        strcpy(message, "You cannot move the seeds as you are not playing.\n");
+                     }
+                     else if ((*senderClient).state == WAITING_TO_PLAY) {
+                        strcpy(message, "You hava to wait for ");
+                        strcat(message, (*senderClient).opponent);
+                        strcat(message, " to play.\n");
+                     }
+                     else if ((*senderClient).state == HAS_TO_PLAY){
+                        int index = atoi(parameter);
+                        if (((*senderClient).player == 1 && index >= 0 && index < 6) ||((*senderClient).player == 2 && index > 5 && index < 12)) {
+                           int arrival = moveSeed(index, (*senderClient).holes);
+                           if (arrival != -1) {
+                              int myScore = collectSeed((*senderClient).player, (*senderClient).holes, (*senderClient).myScore, arrival);
+                              (*senderClient).myScore = myScore;
+                           }
+                           Client *opponent = get_client_by_username((*senderClient).opponent, clients, actual);
+                           showGame((*senderClient).holes, numberOfHoles, (*senderClient).player, (*opponent).myScore, (*senderClient).myScore, senderClient);
+                           showGame((*senderClient).holes, numberOfHoles, (*opponent).player, (*senderClient).myScore, (*opponent).myScore, opponent); 
+                           (*senderClient).state = WAITING_TO_PLAY;
+                           (*opponent).state = HAS_TO_PLAY;
+                        }
+
+                        else {
+                           strcpy(message, "You want to move seeds from a hole that does't belong to you.\n");
+                        }
+
                      }
                      write_client((*senderClient).sock, message);
                   }
@@ -381,9 +414,11 @@ static enum commands checkIfCommand(const char *commandSent){
    else if (!strncmp(commandSent, "reject", sizeof("reject"))) {
       command = REJECT;
    }
-   else if (!strncmp(commandSent, "move", sizeof("challenge"))) {
+
+   else if(!strncmp(commandSent, "move", sizeof("move"))) {
       command = MOVE;
    }
+
    else if (!strncmp(commandSent, "showCommands", sizeof("showCommands"))) {
       command = SHOW;
    }
@@ -468,24 +503,45 @@ static void get_answer_challenge(enum commands command, Client * sender, Client 
       // the client answered accept
       if (command == ACCEPT){
          printf("in accept\n");
-         (*sender).state = PLAYING;
-         (*opponent).state = PLAYING;
          write_client((*opponent).sock, "Your challenge has been accepted.\n");
          int * holes;
-         int numberOfHoles = 12;
          holes = malloc(sizeof(int)*numberOfHoles);
          initGame(holes, numberOfHoles);
          int player = get_random_player_one();
+         (*opponent).player = player;
          int opponentScore = 0;
          int myScore = 0;
-         showGame(holes, numberOfHoles, player, opponentScore, myScore, sender);
          if (player == 1) {
-            player = 2;
+            (*sender).player = 2;
+            (*sender).state = WAITING_TO_PLAY;
+            (*opponent).state = HAS_TO_PLAY;
          }
          else {
-            player = 1;
+            (*sender).player = 1;
+            (*sender).state = HAS_TO_PLAY;
+            (*opponent).state = WAITING_TO_PLAY;
          }
-         showGame(holes, numberOfHoles, player, opponentScore, myScore, opponent);
+         printf("%s : %d\n", (*sender).name, (*sender).state);
+         printf("%s : %d\n", (*opponent).name, (*opponent).state);
+         (*sender).myScore = 0;
+         (*opponent).myScore = 0;
+         showGame(holes, numberOfHoles, (*sender).player, (*opponent).myScore, (*sender).myScore, sender);
+
+         showGame(holes, numberOfHoles, (*opponent).player, (*sender).myScore, (*opponent).myScore, opponent);
+         (*sender).holes = holes;
+         (*opponent).holes = holes;
+
+         char opponent_player[20];
+         sprintf(opponent_player, "%d", (*opponent).player);
+         write_client((*opponent).sock, "You are player : ");
+         write_client((*opponent).sock, opponent_player);
+         write_client((*opponent).sock, "\n");
+         char sender_player[20];
+         sprintf(sender_player, "%d", (*sender).player);
+         write_client((*sender).sock, "You are player : ");
+         write_client((*sender).sock, sender_player);
+         write_client((*sender).sock, "\n");
+
       }
       // the client answered reject
       else if (command == REJECT){
