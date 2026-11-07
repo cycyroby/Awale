@@ -244,7 +244,7 @@ bool hasToBeFed(int player, int * holes) {
 /*
 a losing player given as input (= a player that has to be fed) checks which holes can feed it from its opponent's holes
 */
-bool canFeed(int player, int * holes, int* possibleHoles) {
+bool canFeed(int player, int * holes, int* possibleHoles, Client * opponent, int * possibleMoves) {
     int numberOfHoles = 0;
     int * holesThatCanFeed = malloc((sizeof(int)*12));
     int arrivingHole;
@@ -279,13 +279,21 @@ bool canFeed(int player, int * holes, int* possibleHoles) {
     }
 
     if(numberOfHoles != 0) {
+        printf("a player has to be fed and possible moves will no longer be NULL\n");
+        show("You can only play the holes :", opponent);
         int j = 0;
         for (int k = 0; k < 12; k++) {
             if (holesThatCanFeed[k] == 1) {
                 possibleHoles[j] = k;
+                possibleMoves[j] = k;
                 j++;
+                show(" ", opponent);
+                char possibleHole[20];
+                sprintf(possibleHole, "%d", k);
+                show(possibleHole, opponent);
             }
         }
+        show("\n", opponent);
         return true;
     }
     else {
@@ -295,7 +303,7 @@ bool canFeed(int player, int * holes, int* possibleHoles) {
 }
 
 /*returns true if the game is done because one won't be able to have any more seeds (is hungry and can't be fed)*/
-bool isGameFinishedHunger(int * holes) {
+bool isGameFinishedHunger(int * holes, Client * opponent, bool *feed, int *possibleMoves) {
     int player;
     int*possibleHoles;
     if (hasToBeFed(1, holes)){
@@ -305,12 +313,14 @@ bool isGameFinishedHunger(int * holes) {
             return true;
         }
         possibleHoles = malloc(sizeof(int)*12);
-        return !canFeed(player, holes, possibleHoles);
+        *feed = true;
+        return !canFeed(player, holes, possibleHoles, opponent, possibleMoves);
     }
     else if (hasToBeFed(2, holes)){
         player = 2;
         possibleHoles = malloc(sizeof(int)*12);
-        return !canFeed(player, holes, possibleHoles);
+        *feed = true;
+        return !canFeed(player, holes, possibleHoles, opponent, possibleMoves);
     }
 }
 
@@ -323,14 +333,16 @@ bool isGameFinishedScore(int*holes, int myScore, int opponentScore){
 returns true if the game is done and prints why it is done
 // we're not doing the we can't capture any seeds finishing rule for the moment
 */
-bool isGameFinished(int * holes, int myScore, int opponentScore) {
+bool isGameFinished(int * holes, int myScore, int opponentScore, Client * sender, Client * opponent, bool *feed, int *possibleMoves) {
     bool score = isGameFinishedScore(holes, myScore, opponentScore);
-    bool hunger = isGameFinishedHunger(holes);
+    bool hunger = isGameFinishedHunger(holes, opponent, feed, possibleMoves);
     if (score){
-        printf("One of the players has more than 25 points !\n");
+        show("One of the players has more than 25 points !\n", sender);
+        show("One of the players has more than 25 points !\n", opponent);
     }
     if (hunger){
-        printf("One of the players can't have any more seeds to continue playing !\n");
+        show("One of the players can't have any more seeds to continue playing !\n", sender);
+        show("One of the players can't have any more seeds to continue playing !\n", opponent);
     }
     return score||hunger;
 }

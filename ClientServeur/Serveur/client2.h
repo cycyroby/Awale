@@ -14,6 +14,7 @@ typedef struct
    int player;
    int *holes;
    int myScore;
+   int *possibleMoves;
 }Client;
 
 #endif /* guard */

@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <string.h>
+#include <time.h>
 
 #include "server2.h"
 #include "client2.h"
@@ -125,7 +126,6 @@ static void app(void)
             /* a client is talking */
             if(FD_ISSET(clients[i].sock, &rdfs))
             {
-               printf("client talking : name-%s, opponent-%s, state-%d\n", clients[i].name, clients[i].opponent, clients[i].state);
                Client* senderClient = &(clients[i]);
                int c = read_client(clients[i].sock, buffer);
                /* client disconnected */
@@ -219,35 +219,125 @@ static void app(void)
                      write_client((*senderClient).sock, message);
                   }
                   else if(command == MOVE) {
+                     printf("we are in the move command\n");
                      if((*senderClient).state != HAS_TO_PLAY && (*senderClient).state != WAITING_TO_PLAY) {
                         strcpy(message, "You cannot move the seeds as you are not playing.\n");
+                        write_client((*senderClient).sock, message);
                      }
                      else if ((*senderClient).state == WAITING_TO_PLAY) {
-                        strcpy(message, "You hava to wait for ");
+                        strcpy(message, "You have to wait for ");
                         strcat(message, (*senderClient).opponent);
                         strcat(message, " to play.\n");
+                        write_client((*senderClient).sock, message);
                      }
                      else if ((*senderClient).state == HAS_TO_PLAY){
                         int index = atoi(parameter);
-                        if (((*senderClient).player == 1 && index >= 0 && index < 6) ||((*senderClient).player == 2 && index > 5 && index < 12)) {
+                        // enter this "if" only if a player has to be fed
+                        if ((*senderClient).possibleMoves) {
+                           printf("in possible moves\n");
+                           for (int i = 0; i < sizeof((*senderClient).possibleMoves); i++) {
+
+                              if (index == (*senderClient).possibleMoves[i]) {
+                                 int arrival = moveSeed(index, (*senderClient).holes);
+                                 int score = collectSeed((*senderClient).player, (*senderClient).holes, (*senderClient).myScore, arrival);
+                                 (*senderClient).myScore += score;
+                                 Client *opponent = get_client_by_username((*senderClient).opponent, clients, actual);
+                                 showGame((*senderClient).holes, numberOfHoles, (*senderClient).player, (*opponent).myScore, (*senderClient).myScore, senderClient);
+                                 showGame((*senderClient).holes, numberOfHoles, (*opponent).player, (*senderClient).myScore, (*opponent).myScore, opponent); 
+                                 (*senderClient).state = WAITING_TO_PLAY;
+                                 (*opponent).state = HAS_TO_PLAY;
+                                 write_client((*opponent).sock, "It is your turn ! YEAHH!\n");
+                                 bool feedValue = false;
+                                 int *possibleMoves = malloc(sizeof(int)*numberOfHoles);
+                                 bool finished = isGameFinished((*senderClient).holes, (*senderClient).myScore, (*opponent).myScore, senderClient, opponent, &feedValue, possibleMoves);
+                                 if (feedValue && !finished) {
+                                    (*opponent).possibleMoves = possibleMoves;
+                                 }
+                                 else {
+                                    free(possibleMoves);
+                                    (*opponent).possibleMoves = NULL;
+                                 }
+                                 printf("sizeof possible moves after association : %ld\n", sizeof((*opponent).possibleMoves));
+                                 if (finished) {
+                                    if ((*senderClient).myScore > (*opponent).myScore) {
+                                       write_client((*senderClient).sock, "You won :)\n");
+                                       write_client((*opponent).sock, "You lost :(\n");
+                                    }
+
+                                    else if ((*senderClient).myScore < (*opponent).myScore) {
+                                       write_client((*opponent).sock, "You won :)\n");
+                                       write_client((*senderClient).sock, "You lost :(\n");
+                                    }
+                                    else {
+                                       write_client((*senderClient).sock, "You tied :|\n");
+                                       write_client((*opponent).sock, "You tied :|\n");
+
+                                    }
+                                 }
+                              }
+                           }
+                           (*senderClient).possibleMoves = NULL;
+
+                        }
+                        // if the index belongs to the player (they can play it)
+                        else if (((*senderClient).player == 1 && index >= 0 && index < 6) || ((*senderClient).player == 2 && index >= 6 && index < 12 )) {
+                           printf("not in possible moves - just before move seed\n");
                            int arrival = moveSeed(index, (*senderClient).holes);
+                           printf("arrival index : %d, by sender : %s\n", arrival, senderClient->name);
                            if (arrival != -1) {
+                              printf("good arrival\n");
                               int myScore = collectSeed((*senderClient).player, (*senderClient).holes, (*senderClient).myScore, arrival);
                               (*senderClient).myScore = myScore;
+                              Client *opponent = get_client_by_username((*senderClient).opponent, clients, actual);
+                              showGame((*senderClient).holes, numberOfHoles, (*senderClient).player, (*opponent).myScore, (*senderClient).myScore, senderClient);
+                              showGame((*senderClient).holes, numberOfHoles, (*opponent).player, (*senderClient).myScore, (*opponent).myScore, opponent); 
+                              (*senderClient).state = WAITING_TO_PLAY;
+                              (*opponent).state = HAS_TO_PLAY;
+                              write_client((*opponent).sock, "It is your turn ! YEAHH!\n");
+                              bool feedValue = false;
+                              int *possibleMoves = malloc(sizeof(int)*numberOfHoles);
+                              bool finished = isGameFinished((*senderClient).holes, (*senderClient).myScore, (*opponent).myScore, senderClient, opponent, &feedValue, possibleMoves);
+                              if (feedValue && !finished) {
+                                 (*opponent).possibleMoves = possibleMoves;
+                                 printf("sizeof possible moves after association : %ld\n", sizeof((*opponent).possibleMoves));
+                              }
+                              else {
+                                 free(possibleMoves);
+                                 (*opponent).possibleMoves = NULL;
+                                 printf("not changed possible moves\n");
+                              }
+                              
+                              
+                              if (finished) {
+                                 if ((*senderClient).myScore > (*opponent).myScore) {
+                                    write_client((*senderClient).sock, "You won :)\n");
+                                    write_client((*opponent).sock, "You lost :(\n");
+                                 }
+
+                                 else if ((*senderClient).myScore < (*opponent).myScore) {
+                                    write_client((*opponent).sock, "You won :)\n");
+                                    write_client((*senderClient).sock, "You lost :(\n");
+                                 }
+                                 else {
+                                    write_client((*senderClient).sock, "You tied :|\n");
+                                    write_client((*opponent).sock, "You tied :|\n");
+
+                                 }
+                              }
                            }
-                           Client *opponent = get_client_by_username((*senderClient).opponent, clients, actual);
-                           showGame((*senderClient).holes, numberOfHoles, (*senderClient).player, (*opponent).myScore, (*senderClient).myScore, senderClient);
-                           showGame((*senderClient).holes, numberOfHoles, (*opponent).player, (*senderClient).myScore, (*opponent).myScore, opponent); 
-                           (*senderClient).state = WAITING_TO_PLAY;
-                           (*opponent).state = HAS_TO_PLAY;
+                           else {
+                              write_client((*senderClient).sock, "You can't move seeds from an empty hole\n");
+                           }
+                           
                         }
 
                         else {
-                           strcpy(message, "You want to move seeds from a hole that does't belong to you.\n");
+                           printf("in neither possible moves nor not possible moves\n");
+                           strcpy(message, "You want to move seeds from a hole that doesn't belong to you.\n");
+                           write_client((*senderClient).sock, message);
                         }
 
                      }
-                     write_client((*senderClient).sock, message);
                   }
 
                  /* else if (command == SHOW) {
@@ -530,17 +620,21 @@ static void get_answer_challenge(enum commands command, Client * sender, Client 
          showGame(holes, numberOfHoles, (*opponent).player, (*sender).myScore, (*opponent).myScore, opponent);
          (*sender).holes = holes;
          (*opponent).holes = holes;
+         (*sender).possibleMoves = NULL;
+         (*opponent).possibleMoves = NULL;
 
          char opponent_player[20];
          sprintf(opponent_player, "%d", (*opponent).player);
          write_client((*opponent).sock, "You are player : ");
          write_client((*opponent).sock, opponent_player);
          write_client((*opponent).sock, "\n");
+         write_client((*opponent).sock, "Player 1 begins\n");
          char sender_player[20];
          sprintf(sender_player, "%d", (*sender).player);
          write_client((*sender).sock, "You are player : ");
          write_client((*sender).sock, sender_player);
          write_client((*sender).sock, "\n");
+         write_client((*sender).sock, "Player 1 begins\n");
 
       }
       // the client answered reject
@@ -561,6 +655,7 @@ static void get_answer_challenge(enum commands command, Client * sender, Client 
 
 static int get_random_player_one() {
    //This will give 1 if the challenger is gonna be player one and 2 if he's gonna be player two.
+   srand(time(NULL));
    int n = rand()%2;
    n++;
    return n;
