@@ -501,7 +501,7 @@ static enum commands checkIfCommand(const char *commandSent){
    }
 
    else if (!strncmp(commandSent, "showCommands", sizeof("showCommands"))) {
-      command = SHOW;
+      command = SHOW_COMMANDS;
    }
 
    return command;
@@ -613,12 +613,14 @@ static void get_answer_challenge(enum commands command, Client * sender, Client 
          write_client((*opponent).sock, opponent_player);
          write_client((*opponent).sock, "\n");
          write_client((*opponent).sock, "Player 1 begins\n");
+         write_client((*opponent).sock, "move [index]         - to move a seed from the hole with the given index \n");
          char sender_player[20];
          sprintf(sender_player, "%d", (*sender).player);
          write_client((*sender).sock, "You are player : ");
          write_client((*sender).sock, sender_player);
          write_client((*sender).sock, "\n");
          write_client((*sender).sock, "Player 1 begins\n");
+         write_client((*sender).sock, "move [index]         - to move a seed from the hole with the given index \n");
 
       }
       // the client answered reject
