@@ -12,21 +12,21 @@ void initGame(int *holes, int numberOfHoles) {
     for (int i=0; i<numberOfHoles; i++) {
         holes[i] = 4;
     }
-    /* 
+    /* */
     //test
     holes[0] = 0;
     holes[1] = 0;
     holes[2] = 0;
     holes[3] = 0;
-    holes[4] = 3;
-    holes[5] = 0;
+    holes[4] = 4;
+    holes[5] = 1;
     holes[6] = 1;
     holes[7] = 1;
-    holes[8] = 0;
+    holes[8] = 1;
     holes[9] = 0;
     holes[10] = 0;
-    holes[11] = 0;
-    */
+    holes[11] = 1;
+    /**/
 }
 
 
@@ -343,7 +343,7 @@ int collectSeed(int player, int * holes, int myScore, int arrival) {
     if (player == 1) {
         if (5 < arrival && arrival < 12) {
             int i = 0;
-            while ((holes[arrival - i] == 2 || holes[arrival - i] == 3) && arrival > 5) {
+            while ((holes[arrival - i] == 2 || holes[arrival - i] == 3) && (arrival-i) > 5) {
                 myScore += holes[arrival - i];
                 holes[arrival-i] = 0;
                 i++;
@@ -354,7 +354,7 @@ int collectSeed(int player, int * holes, int myScore, int arrival) {
     if (player == 2) {
         if (0 <= arrival && arrival < 6) {
             int i = 0;
-            while ((holes[arrival - i] == 2 || holes[arrival -i] == 3 ) && arrival >= 0) {
+            while ((holes[arrival - i] == 2 || holes[arrival -i] == 3 ) && (arrival-i) >= 0) {
                 myScore += holes[arrival - i];
                 holes[arrival-i] = 0;
                 i++;

@@ -285,7 +285,7 @@ static void app(void)
                         if (couldPlay) {
                            printf("in move | in could Play\n");
                            int score = collectSeed((*senderClient).player, (*senderClient).holes, (*senderClient).myScore, arrival);
-                           (*senderClient).myScore += score;
+                           (*senderClient).myScore = score;
                            Client *opponent = get_client_by_username((*senderClient).opponent, clients, actual);
                            showGame((*senderClient).holes, numberOfHoles, (*senderClient).player, (*opponent).myScore, (*senderClient).myScore, senderClient);
                            showGame((*senderClient).holes, numberOfHoles, (*opponent).player, (*senderClient).myScore, (*opponent).myScore, opponent); 
