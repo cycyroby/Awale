@@ -12,7 +12,7 @@ void initGame(int *holes, int numberOfHoles) {
     for (int i=0; i<numberOfHoles; i++) {
         holes[i] = 4;
     }
-    /* */
+    /* 
     //test
     holes[0] = 0;
     holes[1] = 0;
@@ -26,7 +26,7 @@ void initGame(int *holes, int numberOfHoles) {
     holes[9] = 0;
     holes[10] = 0;
     holes[11] = 1;
-    /**/
+    */
 }
 
 

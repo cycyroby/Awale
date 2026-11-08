@@ -132,21 +132,23 @@ static void app(void)
                /* client disconnected */
                if(c == 0)
                {
+                  // I think this tells the other clients that "name of client" disconnected
+                  strncpy(buffer, (*senderClient).name, BUF_SIZE - 1);
+                  strncat(buffer, " disconnected !", BUF_SIZE - strlen(buffer) - 1);
+                  //send_message_to_all_clients(clients, senderClient, actual, buffer, 1);
+
                   if ((*senderClient).state == CHALLENGED || (*senderClient).state == CHALLENGING) {
                      Client* opponent = get_client_by_username((*senderClient).opponent, clients, actual);
                      (*opponent).state = OTHER;
                      strcpy((*opponent).opponent, "");
+                     write_client(opponent->sock, buffer);
                   }
                   else if ((*senderClient).state == HAS_TO_PLAY || (*senderClient).state == WAITING_TO_PLAY) {
                      Client* opponent = get_client_by_username((*senderClient).opponent, clients, actual);
                      resetPlayer(opponent, false);
-                     // à compléter.........
+                     write_client(opponent->sock, buffer);
                   }
 
-                  // I think this tells the other clients that "name of client" disconnected
-                  strncpy(buffer, (*senderClient).name, BUF_SIZE - 1);
-                  strncat(buffer, " disconnected !", BUF_SIZE - strlen(buffer) - 1);
-                  send_message_to_all_clients(clients, senderClient, actual, buffer, 1);
                   closesocket(clients[i].sock);
                   remove_client(clients, i, &actual);
                }
