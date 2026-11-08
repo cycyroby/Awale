@@ -341,6 +341,10 @@ static void app(void)
                      printf("in show commands\n");
                      showCommands(*senderClient);
                   }
+                  else if (command == LIST_GAMES) {
+                     printf("in list games\n");
+                     listGames(clients, *senderClient, actual);
+                  }
                   else if (command == NULL_COMMAND) {
                      printf("in command not recognised\n");
                      write_client(senderClient->sock, "Command not recognized. You can use 'showCommands' to see available commands.\n");
@@ -513,6 +517,9 @@ static enum commands checkIfCommand(const char *commandSent){
    else if (!strncmp(commandSent, "showCommands", sizeof("showCommands"))) {
       command = SHOW_COMMANDS;
    }
+   else if(!strncmp(commandSent, "listGames", sizeof("listGames"))) {
+      command = LIST_GAMES;
+   }
    else {
       command = NULL_COMMAND;
    }
@@ -659,16 +666,7 @@ static void show(char *message, Client *sender) {
 }
 
 static void showCommands(Client sender) {
-   write_client(sender.sock, "\n ----\n \
-General commands : \n  \
-users                - to get the names of all online users\n  \
-challenge [username] - to challenge this username to a game. They can either accept or reject the challenge\n  \
-showCommands         - to show all the commands for the game\n \
-Game commands : \n  \
-accept               - to accept a challenge (only if challenged)\n  \
-reject               - to reject a challenge (only if challenged)\n  \
-move [index]         - to move seeds from the hole of the given index (only if playing a game)\n \
-----\n");
+   write_client(sender.sock, SHOWCOMMANDS);
 }
 
 static void resetPlayer(Client * player, bool holesFreed) {
@@ -685,6 +683,75 @@ static void resetPlayer(Client * player, bool holesFreed) {
    player->myScore = 0;
    strcpy(player->opponent, "");
    player->state = OTHER;
+}
+
+int getOngoingGames(Client * clients, int actual, Client ** clientPairs) {
+   int onGoingGamesNbr = 0;
+   Client * opponentAlreadyCounted = malloc(sizeof(Client)*actual); // actual/2 for the size is enough but just in case
+   bool hasAlreadyBeenCounted;
+   for(int i = 0; i < actual; i++)
+   {
+      if (clients[i].state == WAITING_TO_PLAY || clients[i].state == HAS_TO_PLAY) {
+         hasAlreadyBeenCounted = false;
+         int j = 0;
+         while (j < onGoingGamesNbr && !hasAlreadyBeenCounted) {
+            if (clients[i].sock == opponentAlreadyCounted[j].sock) {
+               hasAlreadyBeenCounted = true;
+            }
+            j++;
+         }
+
+         if (!hasAlreadyBeenCounted) {
+            clientPairs[onGoingGamesNbr][0] = clients[i];
+            clientPairs[onGoingGamesNbr][1] = *get_client_by_username(clients[i].opponent, clients, actual);
+            opponentAlreadyCounted[onGoingGamesNbr] = clientPairs[onGoingGamesNbr][1];
+            onGoingGamesNbr++;
+         }
+      }
+   }
+   free(opponentAlreadyCounted);
+   return onGoingGamesNbr;
+}
+
+static void listGames(Client * clients, Client sender, int actual) {
+   char message[BUF_SIZE];
+   message[0] = 0;
+
+   Client ** clientPairs = malloc(sizeof(Client*)*actual);
+   for(int i = 0; i < actual; i++)
+   {
+      clientPairs[i] = malloc(sizeof(Client)*2);
+   }
+   int onGoingGames = getOngoingGames(clients, actual, clientPairs);
+
+   strncpy(message, "---- ongoing games ----\n", BUF_SIZE - 1);
+
+   for(int i = 0; i < onGoingGames; i++)
+   {
+      // the asker's game (if they are playing) will also be shown
+      char score[20];
+      strncat(message, "- ", sizeof message - strlen(message) - 1);
+      strncat(message, clientPairs[i][0].name, sizeof message - strlen(message) - 1);
+      strncat(message, " vs ", sizeof message - strlen(message) - 1);
+      strncat(message, clientPairs[i][1].name, sizeof message - strlen(message) - 1);
+      strncat(message, " (", sizeof message - strlen(message) - 1);
+      sprintf(score, "%d", clientPairs[i][0].myScore);
+      strncat(message, score, sizeof message - strlen(message) - 1);
+      strncat(message, " to ", sizeof message - strlen(message) - 1);
+      sprintf(score, "%d", clientPairs[i][1].myScore);
+      strncat(message, score, sizeof message - strlen(message) - 1);
+      strncat(message, ")\n", sizeof message - strlen(message) - 1);
+   }
+
+   strncat(message, "----\n", sizeof message - strlen(message) - 1);
+
+   for(int i = 0; i < actual; i++)
+   {
+      free(clientPairs[i]);
+   }
+   free(clientPairs);
+
+   write_client(sender.sock, message);
 }
 
 int main(int argc, char **argv)
