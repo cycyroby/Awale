@@ -12,6 +12,21 @@ void initGame(int *holes, int numberOfHoles) {
     for (int i=0; i<numberOfHoles; i++) {
         holes[i] = 4;
     }
+    /* 
+    //test
+    holes[0] = 0;
+    holes[1] = 0;
+    holes[2] = 0;
+    holes[3] = 0;
+    holes[4] = 3;
+    holes[5] = 0;
+    holes[6] = 1;
+    holes[7] = 1;
+    holes[8] = 0;
+    holes[9] = 0;
+    holes[10] = 0;
+    holes[11] = 0;
+    */
 }
 
 
@@ -190,33 +205,6 @@ void showGame(int *holes, int numberOfHoles, int player, int opponentScore, int 
 
 
 /*
-we choose the index hole so it moves the seeds in that hole in the counterclockwise direction
-*/
-int moveSeed(int index, int *holes) {
-
-    int y = holes[index];
-    if (y != 0) {
-        int i;
-        int endIndex = index+y+1;
-
-        for (i = index+1; i < endIndex; i++){
-            if (i%12 != index){
-                holes[i%12] = holes[i%12] + 1;
-                holes[index] -= 1;
-            }
-            else{
-                endIndex++;
-            }
-        }
-        // arrival index
-        return (endIndex-1)%12;
-    }
-    else {
-        return -1;
-    }
-}
-
-/*
 checks if all the holes of the player given are at 0 seeds (= it needs to be fed)
 and then returns true or false accordingly
 */
@@ -348,7 +336,8 @@ bool isGameFinished(int * holes, int myScore, int opponentScore, Client * sender
 }
 
 /*
-
+player : player who is collecting the seeds
+arrival : the index at which they arrived
 */
 int collectSeed(int player, int * holes, int myScore, int arrival) {
     if (player == 1) {
@@ -376,3 +365,64 @@ int collectSeed(int player, int * holes, int myScore, int arrival) {
     return myScore;
 }
 
+/*
+we choose the index hole so it moves the seeds in that hole in the counterclockwise direction
+*/
+int moveSeed(int index, int *holes) {
+    int y = holes[index];
+    if (y != 0) {
+        // test if the move starves the opponent
+        int opponentPlayer;
+        int player;
+        if (0 <= index && index < 6) {
+            player = 1;
+            opponentPlayer = 2;
+        }
+        else if(6 <= index && index < 12) {
+            player = 2;
+            opponentPlayer = 1;
+        }
+        bool doesntStarve = false;
+
+        int* testHoles = malloc(sizeof(int)*12);
+        for (int i=0; i<12; i++) {
+            testHoles[i] = holes[i];
+        }
+
+        int endIndex = index+y+1;
+        for (int i = index+1; i < endIndex; i++){
+            if (i%12 != index){
+                testHoles[i%12] = testHoles[i%12] + 1;
+                testHoles[index] -= 1;
+            }
+            else{
+                endIndex++;
+            }
+        }
+        collectSeed(player, testHoles, 0, (endIndex-1)%12);
+        doesntStarve = !hasToBeFed(opponentPlayer, testHoles);
+        free(testHoles);
+        // end test
+
+        if (doesntStarve) {
+            int endIndex = index+y+1;
+            for (int i = index+1; i < endIndex; i++){
+                if (i%12 != index){
+                    holes[i%12] = holes[i%12] + 1;
+                    holes[index] -= 1;
+                }
+                else{
+                    endIndex++;
+                }
+            }
+            // arrival index
+            return (endIndex-1)%12;
+        }
+        else {
+            return -2;
+        }
+    }
+    else {
+        return -1;
+    }
+}

@@ -49,6 +49,7 @@ enum commands{
 };
 
 #include "client2.h"
+#include <stdbool.h>
 
 static void init(void);
 static void end(void);
@@ -72,4 +73,6 @@ static void get_answer_challenge(enum commands command, Client * sender, Client 
 
 static int get_random_player_one();
 void show(char *message, Client *sender);
+
+void resetPlayer(Client * player, bool holesFreed);
 #endif /* guard */
