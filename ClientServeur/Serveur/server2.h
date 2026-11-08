@@ -33,19 +33,20 @@ typedef struct in_addr IN_ADDR;
 
 #define BUF_SIZE     1024
 
-#define MENU    "\n----\n \
+#define MENU    "\n ----\n \
 Commands : \n \
 users                - to get the names of all online users\n \
 challenge [username] - to challenge this username to a game. They can either accept or reject the challenge\n \
-showCommandes        - to show all the commands for the game\n \
+showCommands         - to show all the commands for the game\n \
 ----\n"
 enum commands{
+    NULL_COMMAND,
     USERS,
     CHALLENGE,
     ACCEPT,
     REJECT,
     MOVE,
-    SHOW
+    SHOW_COMMANDS
 };
 
 #include "client2.h"
@@ -64,7 +65,7 @@ static void clear_clients(Client *clients, int actual);
 
 static void send_usernames(Client *clients, Client sender, int actual);
 static enum commands checkIfCommand(const char *buffer);
-static char* separateCommandParameter(const char* buffer, char* commandName, char*parameter);
+static int separateCommandParameter(const char* buffer, char* commandName, char*parameter);
 static int check_usernames(Client *clients, Client sender, int actual);
 
 static Client* get_client_by_username(const char* name, Client *clients, int actual);
@@ -72,7 +73,8 @@ static void send_challenge(Client* client, Client* sender);
 static void get_answer_challenge(enum commands command, Client * sender, Client *clients, int actual);
 
 static int get_random_player_one();
-void show(char *message, Client *sender);
+static void show(char *message, Client *sender);
 
-void resetPlayer(Client * player, bool holesFreed);
+static void resetPlayer(Client * player, bool holesFreed);
+static void showCommands(Client sender);
 #endif /* guard */

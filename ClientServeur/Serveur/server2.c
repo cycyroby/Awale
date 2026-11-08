@@ -154,10 +154,17 @@ static void app(void)
                }
                else
                {
+                  printf("user typed command\n");
                   char* commandName = malloc(BUF_SIZE*sizeof(char));
-                  char* parameter = malloc(BUF_SIZE*sizeof(char));
-                  parameter = separateCommandParameter(buffer, commandName, parameter);
+                  char* parameterCalculator = malloc(BUF_SIZE*sizeof(char));
+                  char* parameter;
+                  printf(" before seperating command and parameter buffer = %s\n", buffer);
+                  int start = separateCommandParameter(buffer, commandName, parameterCalculator);
+                  parameter = parameterCalculator + start;
+                  //parameter = separateCommandParameter(buffer, commandName, parameter);
+                  printf("command and parameter seperated : command = %s, parameter = %s\n", commandName, parameter);
                   enum commands command = checkIfCommand(commandName);
+                  free(commandName);
                   
                   char message[BUF_SIZE];
                   message[0] = 0;
@@ -214,7 +221,7 @@ static void app(void)
                      }
                      else {
                         printf("in accept reject | not challenged answers\n");
-                        strcpy(message, "Command not recognized. You have not been challenged.\n");
+                        strcpy(message, "You cannot accept nor reject since you have not been challenged.\n");
                      }
                      write_client((*senderClient).sock, message);
                   }
@@ -330,10 +337,15 @@ static void app(void)
                         }
                      }
                   }
-
-                 /* else if (command == SHOW) {
-                     strcpy(message, "The first command is 'move [number]' which means you want to move the seeds from one of your holes");
-                  }*/
+                  else if (command == SHOW_COMMANDS) {
+                     printf("in show commands\n");
+                     showCommands(*senderClient);
+                  }
+                  else if (command == NULL_COMMAND) {
+                     printf("in command not recognised\n");
+                     write_client(senderClient->sock, "Command not recognized. You can use 'showCommands' to see available commands.\n");
+                  }
+                  free(parameterCalculator);
                }
                break;
             }
@@ -455,29 +467,29 @@ static void write_client(SOCKET sock, const char *buffer)
 
 // -----------------------------------------fct we added + main at the end-----------------------------------
 
-static char* separateCommandParameter(const char* buffer, char* commandName, char*parameter) {
+static int separateCommandParameter(const char* buffer, char* commandName, char*parameter) {
    commandName[0] = 0;
    parameter[0] = 0;
 
    strncpy(commandName, buffer, BUF_SIZE - 1);
    strncpy(parameter, buffer, BUF_SIZE - 1);
-   char* ptrCmd = commandName;
-   char* ptrPar = parameter;
+   int ptrCmd = 0;
+   int ptrPar = 0;
 
-   while(*ptrCmd != ' ' && *ptrCmd != '\0') {
+   while(commandName[ptrCmd] != ' ' && commandName[ptrCmd] != '\0') {
       ptrCmd++;
       ptrPar++;
    }
-   if (*ptrCmd == ' ') {
+   if (commandName[ptrCmd] == ' ') {
       ptrPar++;
    }
-   else if (*ptrCmd == '\0') {
-      ptrPar[0] = 0;
-      strncpy(ptrPar, "", BUF_SIZE - 1);
+   else if (commandName[ptrCmd] == '\0') {
+      parameter[0] = 0;
+      strncpy(parameter, "", BUF_SIZE - 1);
    }
-   *ptrCmd = 0;
-   parameter = ptrPar;
-   return parameter;
+   // marks the end of the command word
+   commandName[ptrCmd] = 0;
+   return ptrPar;
 }
 
 static enum commands checkIfCommand(const char *commandSent){
@@ -495,13 +507,14 @@ static enum commands checkIfCommand(const char *commandSent){
    else if (!strncmp(commandSent, "reject", sizeof("reject"))) {
       command = REJECT;
    }
-
    else if(!strncmp(commandSent, "move", sizeof("move"))) {
       command = MOVE;
    }
-
    else if (!strncmp(commandSent, "showCommands", sizeof("showCommands"))) {
       command = SHOW_COMMANDS;
+   }
+   else {
+      command = NULL_COMMAND;
    }
 
    return command;
@@ -633,11 +646,6 @@ static void get_answer_challenge(enum commands command, Client * sender, Client 
       }
 }
 
-// what should happen when a person is challenged is that others can continue their life and the challenged cannot 
-// write anything exept accept, reject or disconnect
-// the challenger cannot challenge another person
-// others cannot challenge the two
-
 static int get_random_player_one() {
    //This will give 1 if the challenger is gonna be player one and 2 if he's gonna be player two.
    srand(time(NULL));
@@ -646,11 +654,24 @@ static int get_random_player_one() {
    return n;
 }
 
-void show(char *message, Client *sender) {
+static void show(char *message, Client *sender) {
    write_client((*sender).sock, message);
 }
 
-void resetPlayer(Client * player, bool holesFreed) {
+static void showCommands(Client sender) {
+   write_client(sender.sock, "\n ----\n \
+General commands : \n  \
+users                - to get the names of all online users\n  \
+challenge [username] - to challenge this username to a game. They can either accept or reject the challenge\n  \
+showCommands         - to show all the commands for the game\n \
+Game commands : \n  \
+accept               - to accept a challenge (only if challenged)\n  \
+reject               - to reject a challenge (only if challenged)\n  \
+move [index]         - to move seeds from the hole of the given index (only if playing a game)\n \
+----\n");
+}
+
+static void resetPlayer(Client * player, bool holesFreed) {
    if (!holesFreed) {
       free(player->holes);
    }
