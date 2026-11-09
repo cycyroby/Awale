@@ -61,6 +61,7 @@ showCommands              - to show all the commands for the game\n \
 Game commands : \n  \
 accept                    - to accept a challenge (only if challenged)\n  \
 reject                    - to reject a challenge (only if challenged)\n  \
+abandon                   - to stop a game (only if playing)\n \
 move [index]              - to move seeds from the hole of the given index (only if playing a game)\n \
 ----\n"
 enum commands{
@@ -74,6 +75,7 @@ enum commands{
     CHALLENGE,
     ACCEPT,
     REJECT,
+    ABANDON,
     MOVE,
     LIST_GAMES,
     OBSERVE,

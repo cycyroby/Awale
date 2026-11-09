@@ -317,6 +317,15 @@ static void app(void)
                      }
                      write_client((*senderClient).sock, message);
                   }
+                  else if (command == ABANDON) {
+                     Client *opponent = get_client_by_username((*senderClient).opponent, clients, actual);
+                     strcpy((*opponent).opponent, "");
+                     (*opponent).state = OTHER;
+                     write_client((*opponent).sock, "Your opponent has given up the game\n");
+                     strcpy((*senderClient).opponent, "");
+                     (*senderClient).state = OTHER;
+                     free((*senderClient).holes);
+                  }
                   else if(command == MOVE) {
                      bool couldPlay = false;
                      int arrival;
@@ -651,6 +660,9 @@ static enum commands checkIfCommand(const char *commandSent){
    }
    else if (!strncmp(commandSent, "reject", sizeof("reject"))) {
       command = REJECT;
+   }
+   else if (!strncmp(commandSent, "abandon", sizeof("abandon"))) {
+      command = ABANDON;
    }
    else if(!strncmp(commandSent, "move", sizeof("move"))) {
       command = MOVE;
