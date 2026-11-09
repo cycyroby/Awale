@@ -57,6 +57,8 @@ challenge [username]      - to challenge this username to a game. They can eithe
 listGames                 - to list all ongoing games\n \
 observe [username]        - to observe a game this username is playing\n \
 stopObserving             - to stop observing\n \
+private                   - to put yourself in private mode (only your friends can observe you)\n \
+public                    - to put yourself in public mode (everyone can observe you)\n \
 showCommands              - to show all the commands for the game\n \
 Game commands : \n  \
 accept                    - to accept a challenge (only if challenged)\n  \
@@ -78,6 +80,8 @@ enum commands{
     LIST_GAMES,
     OBSERVE,
     STOP_OBSERVING,
+    PRIVATE,
+    PUBLIC,
     SHOW_COMMANDS
 };
 
@@ -115,5 +119,7 @@ static void listGames(Client * clients, Client sender, int actual);
 static void observe(Client * player, Client * sender);
 static void stopObserving(Client * player, Client * observer, Client * clients, int actual);
 static void showObservers(Client * player1, Client * player2, Client * clients, int actual);
+
+static bool isFriend(Client * player, Client * asker);
 
 #endif /* guard */

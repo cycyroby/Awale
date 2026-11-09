@@ -111,6 +111,7 @@ static void app(void)
          c.state = OTHER;
          strcpy(c.observing, "");
          c.actualObservers = 0;
+         c.private = false;
          printf("init client state: %d\n" ,c.state);
          // I think it counts the number of clients we have connected
          clients[actual] = c;
@@ -449,8 +450,24 @@ static void app(void)
                         Client *opponent = get_client_by_username((*player).opponent, clients, actual);
                         if (player != NULL) {
                            if ((*player).state == WAITING_TO_PLAY || (*player).state == HAS_TO_PLAY) {
-                              observe(player, senderClient);
-                              showObservers(player, opponent, clients, actual);
+                              bool show = true;
+                              if (player->private) {
+                                 if (!isFriend(senderClient, player)) {
+                                    show = false;
+                                    write_client(senderClient->sock, "The player is private. You can't observe them since you are not friends\n");
+                                 }
+                              }
+                              if (opponent->private) {
+                                 if (!isFriend(senderClient, opponent)) {
+                                    show = false;
+                                    write_client(senderClient->sock, "Their opponent is private. You can't observe them since you are not friends\n");
+                                 }
+                              }
+                              if (show) {
+                                 observe(player, senderClient);
+                                 showObservers(player, opponent, clients, actual);
+                              }
+                              
                            }
                            else {
                               write_client(senderClient->sock, "The user you are trying to observe isn't playing a game.\n");
@@ -470,6 +487,12 @@ static void app(void)
                      else {
                         write_client(senderClient->sock, "Currently you aren't observing anyone.\n");
                      }
+                  }
+                  else if (command == PRIVATE) {
+                     senderClient->private = true;
+                  }
+                  else if (command == PUBLIC) {
+                     senderClient->private = false;
                   }
                   else if (command == NULL_COMMAND) {
                      printf("in command not recognised\n");
@@ -666,6 +689,12 @@ static enum commands checkIfCommand(const char *commandSent){
    }
    else if(!strncmp(commandSent, "stopObserving", sizeof("stopObserving"))) {
       command = STOP_OBSERVING;
+   }
+   else if(!strncmp(commandSent, "private", sizeof("private"))) {
+      command = PRIVATE;
+   }
+   else if(!strncmp(commandSent, "public", sizeof("public"))) {
+      command = PUBLIC;
    }
    else {
       command = NULL_COMMAND;
@@ -971,6 +1000,15 @@ static void showObservers(Client * player1, Client * player2, Client * clients, 
          showGame((*player2).holes, numberOfHoles, (*player2).player, (*player1).myScore, (*player2).myScore, player2, player1->name, player2->name, get_client_by_username(player2->observers[i], clients, actual));
       }
    }
+}
+
+static bool isFriend(Client * asker, Client * player) {
+   for (int i = 0; i < player->numberFriends; i++) {
+      if (!strcmp(asker->name, player->friends[i])) {
+         return true;
+      }
+   }
+   return false;
 }
 
 int main(int argc, char **argv)

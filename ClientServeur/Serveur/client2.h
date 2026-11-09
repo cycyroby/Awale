@@ -14,6 +14,7 @@ typedef struct Client
    SOCKET sock;
    char name[BUF_SIZE];
    enum state state;
+   bool private;
    char opponent[BUF_SIZE];
    int player;
    int *holes;
