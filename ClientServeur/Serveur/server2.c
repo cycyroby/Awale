@@ -181,7 +181,6 @@ static void app(void)
                      write_client((*senderClient).sock, message);
                   }
                   else if (command == CHAT) {
-                     printf("test\n");
                      char* username = malloc(BUF_SIZE*sizeof(char));
                      char* chatCalculator = malloc(BUF_SIZE*sizeof(char));
                      char* chat;
@@ -200,8 +199,42 @@ static void app(void)
                      write_client((*receiver).sock, message);
                      free(chatCalculator);                     
                   }
-                  
-
+                  else if (command == BIO) {
+                     strncpy((*senderClient).bio, parameter, BUF_SIZE - 1);
+                     printf("bio : %s\n", (*senderClient).bio);
+                  }
+                  else if (command == READ_BIO) {
+                     if (parameter[0] == '\0') {
+                        if((*senderClient).bio[0] != '\0') {
+                           strcpy(message, "This is my bio :\n '");
+                           strcat(message, (*senderClient).bio);
+                           strcat(message, " '\n");
+                           write_client((*senderClient).sock, message);
+                        }
+                        else {
+                           write_client((*senderClient).sock, "I don't have a bio yet\n");
+                        }
+                        
+                     }
+                     else { 
+                        Client *client = get_client_by_username(parameter, clients, actual);
+                        if ((*client).bio[0] != '\0') {
+                           char message[BUF_SIZE];
+                           message[0] = 0;
+                           strcpy(message, "This is ");
+                           strcat(message, (*client).name);
+                           strcat(message, "'s bio : \n' ");
+                           strcat(message, (*client).bio);
+                           strcat(message, " '\n");
+                           write_client((*senderClient).sock, message);
+                        }
+                        else {
+                           write_client((*senderClient).sock, (*client).name);
+                           write_client((*senderClient).sock, " doesn't have a bio yet\n");
+                        }
+                     }
+                     
+                  }
                   else if (command == CHALLENGE) {
                      printf("in challenge\n");
                      Client* receiver = get_client_by_username(parameter, clients, actual);
@@ -525,6 +558,12 @@ static enum commands checkIfCommand(const char *commandSent){
    }
    else if (!strncmp(commandSent, "chat", sizeof("chat"))) {
       command = CHAT;
+   }
+   else if (!strncmp(commandSent, "bio", sizeof("bio"))) {
+      command = BIO;
+   }
+   else if(!strncmp(commandSent, "readBio", sizeof("readBio"))) {
+      command = READ_BIO;
    }
    else if (!strncmp(commandSent, "challenge", sizeof("challenge"))) {
       command = CHALLENGE;

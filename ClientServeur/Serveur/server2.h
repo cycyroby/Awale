@@ -35,17 +35,21 @@ typedef struct in_addr IN_ADDR;
 
 #define MENU    "\n ----\n \
 Commands : \n \
-users                - to get the names of all online users\n \
+users                     - to get the names of all online users\n \
 chat [username] [message] - to send a chat to this username\n \
-challenge [username] - to challenge this username to a game. They can either accept or reject the challenge\n \
-listGames            - to list all ongoing games\n \
-showCommands         - to show all the commands for the game\n \
+bio [message]             - to write a little about yourself\n \
+readBio [username]        - to read the bio of this username\n \
+challenge [username]      - to challenge this username to a game. They can either accept or reject the challenge\n \
+listGames                 - to list all ongoing games\n \
+showCommands              - to show all the commands for the game\n \
 ----\n"
 
 #define SHOWCOMMANDS "\n ----\n \
 General commands : \n  \
 users                     - to get the names of all online users\n  \
 chat [username] [message] - to send a chat to this username\n \
+bio [message]             - to write a little about yourself\n \
+readBio [username]        - to read the bio of this username\n \
 challenge [username]      - to challenge this username to a game. They can either accept or reject the challenge\n  \
 listGames                 - to list all ongoing games\n \
 showCommands              - to show all the commands for the game\n \
@@ -58,6 +62,8 @@ enum commands{
     NULL_COMMAND,
     USERS,
     CHAT,
+    BIO,
+    READ_BIO,
     CHALLENGE,
     ACCEPT,
     REJECT,

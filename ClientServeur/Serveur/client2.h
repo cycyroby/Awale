@@ -15,6 +15,7 @@ typedef struct
    int *holes;
    int myScore;
    int *possibleMoves;
+   char bio[BUF_SIZE];
 }Client;
 
 #endif /* guard */
