@@ -180,6 +180,27 @@ static void app(void)
                      }
                      write_client((*senderClient).sock, message);
                   }
+                  else if (command == CHAT) {
+                     printf("test\n");
+                     char* username = malloc(BUF_SIZE*sizeof(char));
+                     char* chatCalculator = malloc(BUF_SIZE*sizeof(char));
+                     char* chat;
+                     int start = separateCommandParameter(parameter, username, chatCalculator);
+                     chat = chatCalculator + start;
+
+                     Client* receiver = get_client_by_username(username, clients, actual);
+                     char message[BUF_SIZE];
+                     message[0] = 0;
+
+                     strcpy(message, (*senderClient).name);
+                     strcat(message, " sent you a chat :\n");
+                     strcat(message, "' ");
+                     strcat(message, chat);
+                     strcat(message, " '\n");
+                     write_client((*receiver).sock, message);
+                     free(chatCalculator);                     
+                  }
+                  
 
                   else if (command == CHALLENGE) {
                      printf("in challenge\n");
@@ -496,11 +517,14 @@ static int separateCommandParameter(const char* buffer, char* commandName, char*
    return ptrPar;
 }
 
+
 static enum commands checkIfCommand(const char *commandSent){
    enum commands command;
-
    if (!strncmp(commandSent, "users", sizeof("users"))){
       command = USERS; 
+   }
+   else if (!strncmp(commandSent, "chat", sizeof("chat"))) {
+      command = CHAT;
    }
    else if (!strncmp(commandSent, "challenge", sizeof("challenge"))) {
       command = CHALLENGE;

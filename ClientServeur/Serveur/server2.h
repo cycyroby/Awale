@@ -36,6 +36,7 @@ typedef struct in_addr IN_ADDR;
 #define MENU    "\n ----\n \
 Commands : \n \
 users                - to get the names of all online users\n \
+chat [username] [message] - to send a chat to this username\n \
 challenge [username] - to challenge this username to a game. They can either accept or reject the challenge\n \
 listGames            - to list all ongoing games\n \
 showCommands         - to show all the commands for the game\n \
@@ -43,18 +44,20 @@ showCommands         - to show all the commands for the game\n \
 
 #define SHOWCOMMANDS "\n ----\n \
 General commands : \n  \
-users                - to get the names of all online users\n  \
-challenge [username] - to challenge this username to a game. They can either accept or reject the challenge\n  \
-listGames            - to list all ongoing games\n \
-showCommands         - to show all the commands for the game\n \
+users                     - to get the names of all online users\n  \
+chat [username] [message] - to send a chat to this username\n \
+challenge [username]      - to challenge this username to a game. They can either accept or reject the challenge\n  \
+listGames                 - to list all ongoing games\n \
+showCommands              - to show all the commands for the game\n \
 Game commands : \n  \
-accept               - to accept a challenge (only if challenged)\n  \
-reject               - to reject a challenge (only if challenged)\n  \
-move [index]         - to move seeds from the hole of the given index (only if playing a game)\n \
+accept                    - to accept a challenge (only if challenged)\n  \
+reject                    - to reject a challenge (only if challenged)\n  \
+move [index]              - to move seeds from the hole of the given index (only if playing a game)\n \
 ----\n"
 enum commands{
     NULL_COMMAND,
     USERS,
+    CHAT,
     CHALLENGE,
     ACCEPT,
     REJECT,
