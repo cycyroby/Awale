@@ -109,6 +109,8 @@ static void app(void)
             strncpy(c.name, buffer, BUF_SIZE - 1);
          }
          c.state = OTHER;
+         strcpy(c.observing, "");
+         c.actualObservers = 0;
          printf("init client state: %d\n" ,c.state);
          // I think it counts the number of clients we have connected
          clients[actual] = c;
@@ -145,6 +147,8 @@ static void app(void)
                   }
                   else if ((*senderClient).state == HAS_TO_PLAY || (*senderClient).state == WAITING_TO_PLAY) {
                      Client* opponent = get_client_by_username((*senderClient).opponent, clients, actual);
+                     stopObserving(senderClient, NULL, clients, actual);
+                     stopObserving(opponent, NULL, clients, actual);
                      resetPlayer(opponent, false);
                      write_client(opponent->sock, buffer);
                   }
@@ -296,8 +300,9 @@ static void app(void)
                            int score = collectSeed((*senderClient).player, (*senderClient).holes, (*senderClient).myScore, arrival);
                            (*senderClient).myScore = score;
                            Client *opponent = get_client_by_username((*senderClient).opponent, clients, actual);
-                           showGame((*senderClient).holes, numberOfHoles, (*senderClient).player, (*opponent).myScore, (*senderClient).myScore, senderClient);
-                           showGame((*senderClient).holes, numberOfHoles, (*opponent).player, (*senderClient).myScore, (*opponent).myScore, opponent); 
+                           showGame((*senderClient).holes, numberOfHoles, (*senderClient).player, (*opponent).myScore, (*senderClient).myScore, senderClient, "Opponent's score", "My score", senderClient);
+                           showGame((*senderClient).holes, numberOfHoles, (*opponent).player, (*senderClient).myScore, (*opponent).myScore, opponent, "Opponent's score", "My score", opponent); 
+                           showObservers(senderClient, opponent, clients, actual);
                            printf("in move | commander's score has been increased by %d and the board has been shown\n", score);
                            (*senderClient).state = WAITING_TO_PLAY;
                            (*opponent).state = HAS_TO_PLAY;
@@ -344,6 +349,39 @@ static void app(void)
                   else if (command == LIST_GAMES) {
                      printf("in list games\n");
                      listGames(clients, *senderClient, actual);
+                  }
+                  else if (command == OBSERVE) {
+                     printf("in observe\n");
+                     if (senderClient->state == WAITING_TO_PLAY || senderClient->state == HAS_TO_PLAY) {
+                        printf("in observe | a player can't\n");
+                        write_client(senderClient->sock, "You can't observe as you are playing a game.\n");
+                     }
+                     else {
+                        Client* player = get_client_by_username(parameter, clients, actual);
+                        Client *opponent = get_client_by_username((*player).opponent, clients, actual);
+                        if (player != NULL) {
+                           if ((*player).state == WAITING_TO_PLAY || (*player).state == HAS_TO_PLAY) {
+                              observe(player, senderClient);
+                              showObservers(player, opponent, clients, actual);
+                           }
+                           else {
+                              write_client(senderClient->sock, "The user you are trying to observe isn't playing a game.\n");
+                           }
+                        }
+                        else {
+                           write_client(senderClient->sock, "The user you are trying to observe isn't online or doesn't exist :(\n");
+                        } 
+                     }
+                  }
+                  else if (command == STOP_OBSERVING) {
+                     printf("in stop observing\n");
+                     Client * player = get_client_by_username(senderClient->observing, clients, actual);
+                     if (player != NULL) {
+                        stopObserving(player, senderClient, clients, actual);
+                     }
+                     else {
+                        write_client(senderClient->sock, "Currently you aren't observing anyone.\n");
+                     }
                   }
                   else if (command == NULL_COMMAND) {
                      printf("in command not recognised\n");
@@ -520,6 +558,12 @@ static enum commands checkIfCommand(const char *commandSent){
    else if(!strncmp(commandSent, "listGames", sizeof("listGames"))) {
       command = LIST_GAMES;
    }
+   else if(!strncmp(commandSent, "observe", sizeof("observe"))) {
+      command = OBSERVE;
+   }
+   else if(!strncmp(commandSent, "stopObserving", sizeof("stopObserving"))) {
+      command = STOP_OBSERVING;
+   }
    else {
       command = NULL_COMMAND;
    }
@@ -600,6 +644,10 @@ static void get_answer_challenge(enum commands command, Client * sender, Client 
       // the client answered accept
       if (command == ACCEPT){
          write_client((*opponent).sock, "Your challenge has been accepted.\n");
+         
+         stopObserving(get_client_by_username(sender->observing, clients, actual), sender, clients, actual);
+         stopObserving(get_client_by_username(opponent->observing, clients, actual), opponent, clients, actual);
+
          int * holes;
          holes = malloc(sizeof(int)*numberOfHoles);
          initGame(holes, numberOfHoles);
@@ -619,9 +667,9 @@ static void get_answer_challenge(enum commands command, Client * sender, Client 
          }
          (*sender).myScore = 0;
          (*opponent).myScore = 0;
-         showGame(holes, numberOfHoles, (*sender).player, (*opponent).myScore, (*sender).myScore, sender);
+         showGame(holes, numberOfHoles, (*sender).player, (*opponent).myScore, (*sender).myScore, sender, "Opponent's score", "My score", sender);
 
-         showGame(holes, numberOfHoles, (*opponent).player, (*sender).myScore, (*opponent).myScore, opponent);
+         showGame(holes, numberOfHoles, (*opponent).player, (*sender).myScore, (*opponent).myScore, opponent, "Opponent's score", "My score", opponent);
          (*sender).holes = holes;
          (*opponent).holes = holes;
          (*sender).possibleMoves = NULL;
@@ -685,6 +733,20 @@ static void resetPlayer(Client * player, bool holesFreed) {
    player->state = OTHER;
 }
 
+/*usage : 
+Client ** clientPairs = malloc(sizeof(Client*)*actual);
+for(int i = 0; i < actual; i++)
+{
+   clientPairs[i] = malloc(sizeof(Client)*2);
+}
+int onGoingGames = getOngoingGames(clients, actual, clientPairs);
+...
+for(int i = 0; i < actual; i++)
+   {
+      free(clientPairs[i]);
+   }
+   free(clientPairs);
+*/
 int getOngoingGames(Client * clients, int actual, Client ** clientPairs) {
    int onGoingGamesNbr = 0;
    Client * opponentAlreadyCounted = malloc(sizeof(Client)*actual); // actual/2 for the size is enough but just in case
@@ -752,6 +814,60 @@ static void listGames(Client * clients, Client sender, int actual) {
    free(clientPairs);
 
    write_client(sender.sock, message);
+}
+
+static void observe(Client * player, Client * sender) {
+   strcpy(sender->observing, player->name);
+
+   if(player->observers) {
+      player->observers[player->actualObservers] = sender->name;
+      player->actualObservers++;
+   }
+}
+
+static void stopObserving(Client * player, Client * observer, Client * clients, int actual) {
+   if (player != NULL) {
+      // pour chaque nom de client dans observers - on l'enlève et on enlève chez cet observer le player
+      for (int i = 0; i < player->actualObservers; i++) {
+         if (observer != NULL) {
+            if (observer->sock == get_client_by_username(player->observers[i], clients, actual)->sock) {
+               strcpy(observer->observing, "");
+
+               /* we remove the client in the array */
+               memmove(player->observers + i, player->observers + i + 1, (player->actualObservers - i - 1) * sizeof(BUF_SIZE));
+               /* number client - 1 */
+               player->actualObservers--;
+            }
+         }
+         else {
+            strcpy(get_client_by_username(player->observers[i], clients, actual)->observing, "");
+
+            /* we remove the client in the array */
+            memmove(player->observers + i, player->observers + i + 1, (player->actualObservers - i - 1) * sizeof(BUF_SIZE));
+            /* number client - 1 */
+            player->actualObservers--;
+         }
+      }
+   }
+}
+
+static void showObservers(Client * player1, Client * player2, Client * clients, int actual) {
+   for (int i = 0; i < player1->actualObservers; i++) {
+      if (player1->player == 1) {
+         showGame((*player1).holes, numberOfHoles, (*player1).player, (*player2).myScore, (*player1).myScore, player1, player2->name, player1->name, get_client_by_username(player1->observers[i], clients, actual));
+      }
+      else {
+         showGame((*player2).holes, numberOfHoles, (*player2).player, (*player1).myScore, (*player2).myScore, player2, player1->name, player2->name, get_client_by_username(player1->observers[i], clients, actual));
+      }
+   }
+   for (int i = 0; i < player2->actualObservers; i++) {
+      if (player1->player == 1) {
+         showGame((*player1).holes, numberOfHoles, (*player1).player, (*player2).myScore, (*player1).myScore, player1, player2->name, player1->name, get_client_by_username(player2->observers[i], clients, actual));
+      }
+      else {
+         showGame((*player2).holes, numberOfHoles, (*player2).player, (*player1).myScore, (*player2).myScore, player2, player1->name, player2->name, get_client_by_username(player2->observers[i], clients, actual));
+      }
+   }
 }
 
 int main(int argc, char **argv)

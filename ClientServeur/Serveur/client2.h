@@ -2,6 +2,7 @@
 #define CLIENT_H
 
 #include "server2.h"
+#include <stdbool.h>
 
 enum state{HAS_TO_PLAY, WAITING_TO_PLAY, CHALLENGING, CHALLENGED, OTHER};
 
@@ -15,6 +16,9 @@ typedef struct
    int *holes;
    int myScore;
    int *possibleMoves;
+   char observing[BUF_SIZE];
+   char * observers[BUF_SIZE];
+   int actualObservers;
 }Client;
 
 #endif /* guard */

@@ -38,6 +38,8 @@ Commands : \n \
 users                - to get the names of all online users\n \
 challenge [username] - to challenge this username to a game. They can either accept or reject the challenge\n \
 listGames            - to list all ongoing games\n \
+observe [username]   - to observe a game this username is playing\n \
+stopObserving        - to stop observing\n \
 showCommands         - to show all the commands for the game\n \
 ----\n"
 
@@ -46,6 +48,8 @@ General commands : \n  \
 users                - to get the names of all online users\n  \
 challenge [username] - to challenge this username to a game. They can either accept or reject the challenge\n  \
 listGames            - to list all ongoing games\n \
+observe [username]   - to observe a game this username is playing\n \
+stopObserving        - to stop observing\n \
 showCommands         - to show all the commands for the game\n \
 Game commands : \n  \
 accept               - to accept a challenge (only if challenged)\n  \
@@ -60,6 +64,8 @@ enum commands{
     REJECT,
     MOVE,
     LIST_GAMES,
+    OBSERVE,
+    STOP_OBSERVING,
     SHOW_COMMANDS
 };
 
@@ -93,4 +99,9 @@ static void resetPlayer(Client * player, bool holesFreed);
 static void showCommands(Client sender);
 int getOngoingGames(Client * clients, int actual, Client ** clientPairs);
 static void listGames(Client * clients, Client sender, int actual);
+
+static void observe(Client * player, Client * sender);
+static void stopObserving(Client * player, Client * observer, Client * clients, int actual);
+static void showObservers(Client * player1, Client * player2, Client * clients, int actual);
+
 #endif /* guard */

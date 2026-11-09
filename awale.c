@@ -161,7 +161,7 @@ void printHoles(char *message, int*holes, int numberOfHoles, int holeWidth, int 
   ___________ ___________ ___________ ___________ ___________ ___________ 
  |_holes[6]__|_holes[7]__|_holes[8]__|_holes[9]__|_holes[10]_|_holes[11]_| player 2
  */
-void showGame(int *holes, int numberOfHoles, int player, int opponentScore, int myScore, Client *sender) {
+void showGame(int *holes, int numberOfHoles, int player, int opponentScore, int myScore, Client *sender, char*opponent, char*me, Client*showTo) {
     int holeWidth = 4;
 
     int iOpp;
@@ -186,21 +186,23 @@ void showGame(int *holes, int numberOfHoles, int player, int opponentScore, int 
 
 
     // show opponnent's holes
-    printHoles(message, holes, numberOfHoles, holeWidth, iOpp, 1, "Opponent's score", opponentScore);
+    //"Opponent's score"
+    printHoles(message, holes, numberOfHoles, holeWidth, iOpp, 1, opponent, opponentScore);
 
 
     // second separation line
     printSeparationLine(message, numberOfHoles, holeWidth);
 
     // show my holes
-    printHoles(message, holes, numberOfHoles, holeWidth, iMine, 2, "My score", myScore);
+    //"My score"
+    printHoles(message, holes, numberOfHoles, holeWidth, iMine, 2, me, myScore);
 
     printIndexes(message, numberOfHoles, holeWidth, iMine, 2);
 
     strcat(message, "\n");
 
 
-    show(message, sender);
+    show(message, showTo);
 }
 
 
