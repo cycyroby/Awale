@@ -115,6 +115,7 @@ static void app(void)
          // I think it counts the number of clients we have connected
          clients[actual] = c;
          actual++;
+         c.numberFriends = 0;
          
 
          write_client(c.sock, MENU);
@@ -184,7 +185,94 @@ static void app(void)
                      }
                      write_client((*senderClient).sock, message);
                   }
+                  else if (command == CHAT) {
+                     char* username = malloc(BUF_SIZE*sizeof(char));
+                     char* chatCalculator = malloc(BUF_SIZE*sizeof(char));
+                     char* chat;
+                     int start = separateCommandParameter(parameter, username, chatCalculator);
+                     chat = chatCalculator + start;
 
+                     Client* receiver = get_client_by_username(username, clients, actual);
+                     char message[BUF_SIZE];
+                     message[0] = 0;
+
+                     strcpy(message, (*senderClient).name);
+                     strcat(message, " sent you a chat :\n");
+                     strcat(message, "' ");
+                     strcat(message, chat);
+                     strcat(message, " '\n");
+                     write_client((*receiver).sock, message);
+                     free(chatCalculator);                     
+                  }
+                  else if (command == BIO) {
+                     strncpy((*senderClient).bio, parameter, BUF_SIZE - 1);
+                     printf("bio : %s\n", (*senderClient).bio);
+                  }
+                  else if (command == READ_BIO) {
+                     if (parameter[0] == '\0') {
+                        if((*senderClient).bio[0] != '\0') {
+                           strcpy(message, "This is my bio :\n '");
+                           strcat(message, (*senderClient).bio);
+                           strcat(message, " '\n");
+                           write_client((*senderClient).sock, message);
+                        }
+                        else {
+                           write_client((*senderClient).sock, "I don't have a bio yet\n");
+                        }
+                        
+                     }
+                     else { 
+                        Client *client = get_client_by_username(parameter, clients, actual);
+                        if ((*client).bio[0] != '\0') {
+                           char message[BUF_SIZE];
+                           message[0] = 0;
+                           strcpy(message, "This is ");
+                           strcat(message, (*client).name);
+                           strcat(message, "'s bio : \n' ");
+                           strcat(message, (*client).bio);
+                           strcat(message, " '\n");
+                           write_client((*senderClient).sock, message);
+                        }
+                        else {
+                           write_client((*senderClient).sock, (*client).name);
+                           write_client((*senderClient).sock, " doesn't have a bio yet\n");
+                        }
+                     }
+                     
+                  }
+                  else if (command == FRIENDS) {
+                     
+                     Client *friend = get_client_by_username(parameter, clients, actual);
+                     if (friend != NULL) {
+                        printf("in friends\n");
+                        printf("number of friends : %d\n", (*senderClient).numberFriends);
+                        (*senderClient).friends[(*senderClient).numberFriends] = (*friend).name;
+                        printf("after association\n");
+                        (*senderClient).numberFriends++;
+                        
+                     }
+                     else {
+                        write_client((*senderClient).sock, "You can't be friend with someone that doesn't exist\n");
+                     }
+                     for (int i = 0; i < (*senderClient).numberFriends; i++) { 
+                        printf("%s\n", (*senderClient).friends[i]);
+                     }
+                  }
+                  else if (command == REMOVE_FRIENDS) {
+                     int friendDelete = 0;
+                     for (int i = 0; i < (*senderClient).numberFriends; i++) {
+                        if (!strncmp((*senderClient).friends[i], parameter, sizeof(parameter))) {
+                           friendDelete = i;
+                        }
+                     } 
+                     (*senderClient).numberFriends--;
+                     for (int j = friendDelete; j < (*senderClient).numberFriends; j++) {
+                        (*senderClient).friends[j] = (*senderClient).friends[j+1];
+                     }
+                     for (int i = 0; i < (*senderClient).numberFriends; i++) {
+                        printf("%s\n", (*senderClient).friends[i]);
+                     }
+                  }
                   else if (command == CHALLENGE) {
                      printf("in challenge\n");
                      Client* receiver = get_client_by_username(parameter, clients, actual);
@@ -539,6 +627,21 @@ static enum commands checkIfCommand(const char *commandSent){
 
    if (!strncmp(commandSent, "users", sizeof("users"))){
       command = USERS; 
+   }
+   else if (!strncmp(commandSent, "chat", sizeof("chat"))) {
+      command = CHAT;
+   }
+   else if (!strncmp(commandSent, "bio", sizeof("bio"))) {
+      command = BIO;
+   }
+   else if(!strncmp(commandSent, "readBio", sizeof("readBio"))) {
+      command = READ_BIO;
+   }
+   else if (!strncmp(commandSent, "friends", sizeof("friends"))) {
+      command = FRIENDS;
+   }
+   else if (!strncmp(commandSent, "removeFriend", sizeof("removeFriends"))) {
+      command = REMOVE_FRIENDS;
    }
    else if (!strncmp(commandSent, "challenge", sizeof("challenge"))) {
       command = CHALLENGE;

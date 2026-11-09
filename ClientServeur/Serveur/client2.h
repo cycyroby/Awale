@@ -6,7 +6,10 @@
 
 enum state{HAS_TO_PLAY, WAITING_TO_PLAY, CHALLENGING, CHALLENGED, OTHER};
 
-typedef struct
+
+
+
+typedef struct Client
 {
    SOCKET sock;
    char name[BUF_SIZE];
@@ -19,6 +22,9 @@ typedef struct
    char observing[BUF_SIZE];
    char * observers[BUF_SIZE];
    int actualObservers;
-}Client;
+   char bio[BUF_SIZE];
+   char *friends[BUF_SIZE];
+   int numberFriends;
+} Client;
 
 #endif /* guard */
