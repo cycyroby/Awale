@@ -2,9 +2,13 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <string.h>
+#include <time.h>
 
 #include "server2.h"
 #include "client2.h"
+#include "../../awale.c"
+
+#define numberOfHoles 12
 
 static void init(void)
 {
@@ -105,10 +109,14 @@ static void app(void)
             strncpy(c.name, buffer, BUF_SIZE - 1);
          }
          c.state = OTHER;
+         strcpy(c.observing, "");
+         c.actualObservers = 0;
+         c.private = false;
          printf("init client state: %d\n" ,c.state);
          // I think it counts the number of clients we have connected
          clients[actual] = c;
          actual++;
+         c.numberFriends = 0;
          
 
          write_client(c.sock, MENU);
@@ -122,35 +130,47 @@ static void app(void)
             /* a client is talking */
             if(FD_ISSET(clients[i].sock, &rdfs))
             {
-               printf("client talking : name-%s, opponent-%s, state-%d\n", clients[i].name, clients[i].opponent, clients[i].state);
+               printf("--------------------\n");
                Client* senderClient = &(clients[i]);
                int c = read_client(clients[i].sock, buffer);
                /* client disconnected */
                if(c == 0)
                {
+                  // I think this tells the other clients that "name of client" disconnected
+                  strncpy(buffer, (*senderClient).name, BUF_SIZE - 1);
+                  strncat(buffer, " disconnected !", BUF_SIZE - strlen(buffer) - 1);
+                  //send_message_to_all_clients(clients, senderClient, actual, buffer, 1);
+
                   if ((*senderClient).state == CHALLENGED || (*senderClient).state == CHALLENGING) {
                      Client* opponent = get_client_by_username((*senderClient).opponent, clients, actual);
                      (*opponent).state = OTHER;
                      strcpy((*opponent).opponent, "");
+                     write_client(opponent->sock, buffer);
                   }
-                  else if ((*senderClient).state == PLAYING) {
+                  else if ((*senderClient).state == HAS_TO_PLAY || (*senderClient).state == WAITING_TO_PLAY) {
                      Client* opponent = get_client_by_username((*senderClient).opponent, clients, actual);
-                     // à compléter.........
+                     stopObserving(senderClient, NULL, clients, actual);
+                     stopObserving(opponent, NULL, clients, actual);
+                     resetPlayer(opponent, false);
+                     write_client(opponent->sock, buffer);
                   }
 
-                  // I think this tells the other clients that "name of client" disconnected
-                  strncpy(buffer, (*senderClient).name, BUF_SIZE - 1);
-                  strncat(buffer, " disconnected !", BUF_SIZE - strlen(buffer) - 1);
-                  send_message_to_all_clients(clients, senderClient, actual, buffer, 1);
                   closesocket(clients[i].sock);
                   remove_client(clients, i, &actual);
                }
                else
                {
+                  printf("user typed command\n");
                   char* commandName = malloc(BUF_SIZE*sizeof(char));
-                  char* parameter = malloc(BUF_SIZE*sizeof(char));
-                  parameter = separateCommandParameter(buffer, commandName, parameter);
+                  char* parameterCalculator = malloc(BUF_SIZE*sizeof(char));
+                  char* parameter;
+                  printf(" before seperating command and parameter buffer = %s\n", buffer);
+                  int start = separateCommandParameter(buffer, commandName, parameterCalculator);
+                  parameter = parameterCalculator + start;
+                  //parameter = separateCommandParameter(buffer, commandName, parameter);
+                  printf("command and parameter seperated : command = %s, parameter = %s\n", commandName, parameter);
                   enum commands command = checkIfCommand(commandName);
+                  free(commandName);
                   
                   char message[BUF_SIZE];
                   message[0] = 0;
@@ -159,15 +179,103 @@ static void app(void)
                      printf("in users\n");
                      send_usernames(clients, (*senderClient), actual);
                      if ((*senderClient).state == CHALLENGED) {
-                        printf("in users challe\n");
+                        printf("in users | challenged asks\n");
                         strcpy(message, "Don't forget to either accept or reject ");
                         strcat(message, (*senderClient).opponent);
                         strcat(message, "'s challenge\n");
                      }
                      write_client((*senderClient).sock, message);
                   }
+                  else if (command == CHAT) {
+                     char* username = malloc(BUF_SIZE*sizeof(char));
+                     char* chatCalculator = malloc(BUF_SIZE*sizeof(char));
+                     char* chat;
+                     int start = separateCommandParameter(parameter, username, chatCalculator);
+                     chat = chatCalculator + start;
 
+                     Client* receiver = get_client_by_username(username, clients, actual);
+                     char message[BUF_SIZE];
+                     message[0] = 0;
+
+                     strcpy(message, (*senderClient).name);
+                     strcat(message, " sent you a chat :\n");
+                     strcat(message, "' ");
+                     strcat(message, chat);
+                     strcat(message, " '\n");
+                     write_client((*receiver).sock, message);
+                     free(chatCalculator);                     
+                  }
+                  else if (command == BIO) {
+                     strncpy((*senderClient).bio, parameter, BUF_SIZE - 1);
+                     printf("bio : %s\n", (*senderClient).bio);
+                  }
+                  else if (command == READ_BIO) {
+                     if (parameter[0] == '\0') {
+                        if((*senderClient).bio[0] != '\0') {
+                           strcpy(message, "This is my bio :\n '");
+                           strcat(message, (*senderClient).bio);
+                           strcat(message, " '\n");
+                           write_client((*senderClient).sock, message);
+                        }
+                        else {
+                           write_client((*senderClient).sock, "I don't have a bio yet\n");
+                        }
+                        
+                     }
+                     else { 
+                        Client *client = get_client_by_username(parameter, clients, actual);
+                        if ((*client).bio[0] != '\0') {
+                           char message[BUF_SIZE];
+                           message[0] = 0;
+                           strcpy(message, "This is ");
+                           strcat(message, (*client).name);
+                           strcat(message, "'s bio : \n' ");
+                           strcat(message, (*client).bio);
+                           strcat(message, " '\n");
+                           write_client((*senderClient).sock, message);
+                        }
+                        else {
+                           write_client((*senderClient).sock, (*client).name);
+                           write_client((*senderClient).sock, " doesn't have a bio yet\n");
+                        }
+                     }
+                     
+                  }
+                  else if (command == FRIENDS) {
+                     
+                     Client *friend = get_client_by_username(parameter, clients, actual);
+                     if (friend != NULL) {
+                        printf("in friends\n");
+                        printf("number of friends : %d\n", (*senderClient).numberFriends);
+                        (*senderClient).friends[(*senderClient).numberFriends] = (*friend).name;
+                        printf("after association\n");
+                        (*senderClient).numberFriends++;
+                        
+                     }
+                     else {
+                        write_client((*senderClient).sock, "You can't be friend with someone that doesn't exist\n");
+                     }
+                     for (int i = 0; i < (*senderClient).numberFriends; i++) { 
+                        printf("%s\n", (*senderClient).friends[i]);
+                     }
+                  }
+                  else if (command == REMOVE_FRIENDS) {
+                     int friendDelete = 0;
+                     for (int i = 0; i < (*senderClient).numberFriends; i++) {
+                        if (!strncmp((*senderClient).friends[i], parameter, sizeof(parameter))) {
+                           friendDelete = i;
+                        }
+                     } 
+                     (*senderClient).numberFriends--;
+                     for (int j = friendDelete; j < (*senderClient).numberFriends; j++) {
+                        (*senderClient).friends[j] = (*senderClient).friends[j+1];
+                     }
+                     for (int i = 0; i < (*senderClient).numberFriends; i++) {
+                        printf("%s\n", (*senderClient).friends[i]);
+                     }
+                  }
                   else if (command == CHALLENGE) {
+                     printf("in challenge\n");
                      Client* receiver = get_client_by_username(parameter, clients, actual);
 
                      if ((*senderClient).state == CHALLENGED) {
@@ -178,18 +286,14 @@ static void app(void)
                         strcat(message, (*senderClient).opponent);
                         strcat(message, ". Wait patiently until they either accept or refuse your challenge.\n");
                      }
-                     else if ((*senderClient).state == PLAYING) {
+                     else if ((*senderClient).state == HAS_TO_PLAY || (*senderClient).state == WAITING_TO_PLAY) {
                         strcpy(message, "You are already playing a game. You cannot challenge another person.\n");
                      }
                      else if ((*senderClient).state == OTHER) {
-                        // if we actually found a client (the name isn't "")
-                        printf("in challe before check receiver is client\n");
-                        //if (strcmp((*receiver).name, "") != 0) {
+                        // if we actually found a client
                         if (receiver != NULL) {
-                           printf("in challe after check receiver is client\n");
                            if ((*receiver).state == OTHER) {
                               send_challenge(receiver, senderClient);
-                              printf(" after send challenge : %s as %d from %s as %d\n",(*senderClient).opponent, (*receiver).state, (*receiver).opponent, (*senderClient).state);
                               strcpy(message, "");
                            }
                            else {
@@ -200,21 +304,210 @@ static void app(void)
                            strcpy(message, "The user you challenged isn't online or doesn't exist :(\n");
                         } 
                      }  
-                     write_client((*senderClient).sock, message);
-                     printf("in challe message sent\n");                  
+                     write_client((*senderClient).sock, message);                 
                   }
                   else if(command == ACCEPT || command == REJECT) {
-                     printf("in accept or reject, opponent : %s, state : %d we want 2\n", (*senderClient).opponent, (*senderClient).state);
+                     printf("in accept or reject\n");
                      if ((*senderClient).state == CHALLENGED) {
-                        printf("in accept rej challe\n");
+                        printf("in accept reject | challenged answers\n");
                         get_answer_challenge(command, senderClient, clients, actual);
                      }
                      else {
-                        printf("in accept rej not challe\n");
-                        strcpy(message, "Command not recognized. You have not been challenged.\n");
+                        printf("in accept reject | not challenged answers\n");
+                        strcpy(message, "You cannot accept nor reject since you have not been challenged.\n");
                      }
                      write_client((*senderClient).sock, message);
                   }
+                  else if (command == ABANDON) {
+                     Client *opponent = get_client_by_username((*senderClient).opponent, clients, actual);
+                     strcpy((*opponent).opponent, "");
+                     (*opponent).state = OTHER;
+                     write_client((*opponent).sock, "Your opponent has given up the game\n");
+                     strcpy((*senderClient).opponent, "");
+                     (*senderClient).state = OTHER;
+                     free((*senderClient).holes);
+                  }
+                  else if(command == MOVE) {
+                     bool couldPlay = false;
+                     int arrival;
+                     printf("in move\n");
+                     if((*senderClient).state != HAS_TO_PLAY && (*senderClient).state != WAITING_TO_PLAY) {
+                        printf("in move | commander is not a player\n");
+                        strcpy(message, "You cannot move the seeds as you are not playing.\n");
+                        write_client((*senderClient).sock, message);
+                     }
+                     else if ((*senderClient).state == WAITING_TO_PLAY) {
+                        printf("in move | not commander's turn\n");
+                        strcpy(message, "You have to wait for ");
+                        strcat(message, (*senderClient).opponent);
+                        strcat(message, " to play.\n");
+                        write_client((*senderClient).sock, message);
+                     }
+                     else if ((*senderClient).state == HAS_TO_PLAY){
+                        printf("in move | commander's turn\n");
+                        int index = atoi(parameter);
+                        // enter this "if" only if the opponent player has to be fed
+                        if ((*senderClient).possibleMoves) {
+                           printf("in move | opponent has to be fed by commander\n");
+                           for (int i = 0; i < sizeof((*senderClient).possibleMoves); i++) {
+
+                              if (index == (*senderClient).possibleMoves[i]) {
+                                 printf("in move | commander's move is in the authorised moves\n");
+                                 arrival = moveSeed(index, (*senderClient).holes);
+                                 couldPlay = true;
+                              }
+                           }
+                           if (couldPlay) {
+                              free(senderClient->possibleMoves);
+                              printf("in move | freed possible moves\n");
+                              senderClient->possibleMoves = NULL;
+                              printf("in move | nulled possible moves\n");
+                           }
+                           else {
+                              printf("in move | commander played a non playable hole | doesn't feed\n");
+                              write_client((*senderClient).sock, "You can't move seeds from holes that don't feed your opponent\n");
+                           }
+
+                        }
+                        // if the index belongs to the player (they can play it)
+                        else if (((*senderClient).player == 1 && index >= 0 && index < 6) || ((*senderClient).player == 2 && index >= 6 && index < 12 )) {
+                           printf("in move | no one has to be fed, commander's index is a correct one\n");
+                           arrival = moveSeed(index, (*senderClient).holes);
+                           if (arrival == -1) {
+                              printf("in move | commander played a non playable hole | empty hole\n");
+                              write_client((*senderClient).sock, "You can't move seeds from an empty hole\n");
+                           }
+                           else if (arrival == -2) {
+                              printf("in move | commander played a non playable hole | starving hole\n");
+                              write_client((*senderClient).sock, "You can't move seeds from a hole starves your opponent by taking all their seeds\n");
+                           }
+                           else {
+                              printf("in move | commander played a playable hole\n");
+                              couldPlay = true;
+                           }
+                           
+                        }
+                        else {
+                           printf("in move | no one has to be fed, commander's index is a correct one\n");
+                           strcpy(message, "You want to move seeds from a hole that doesn't belong to you.\n");
+                           write_client((*senderClient).sock, message);
+                        }
+
+                        if (couldPlay) {
+                           printf("in move | in could Play\n");
+                           int score = collectSeed((*senderClient).player, (*senderClient).holes, (*senderClient).myScore, arrival);
+                           (*senderClient).myScore = score;
+                           Client *opponent = get_client_by_username((*senderClient).opponent, clients, actual);
+                           showGame((*senderClient).holes, numberOfHoles, (*senderClient).player, (*opponent).myScore, (*senderClient).myScore, senderClient, "Opponent's score", "My score", senderClient);
+                           showGame((*senderClient).holes, numberOfHoles, (*opponent).player, (*senderClient).myScore, (*opponent).myScore, opponent, "Opponent's score", "My score", opponent); 
+                           showObservers(senderClient, opponent, clients, actual);
+                           printf("in move | commander's score has been increased by %d and the board has been shown\n", score);
+                           (*senderClient).state = WAITING_TO_PLAY;
+                           (*opponent).state = HAS_TO_PLAY;
+                           printf("in move | in could Play | turn given to the other\n");
+                           write_client((*opponent).sock, "It is your turn ! YEAHH!\n");
+                           bool feedValue = false;
+                           // the possible moves are calculated for the opponent because only your play can starve you so your opponent has to feed you
+                           // in our rules you cannot be starved by your opponent (-2 returned by the move function)
+                           int *possibleMoves = malloc(sizeof(int)*numberOfHoles);
+                           bool finished = isGameFinished((*senderClient).holes, (*senderClient).myScore, (*opponent).myScore, senderClient, opponent, &feedValue, possibleMoves);
+                           if (feedValue && !finished) {
+                              printf("in move | in could Play | commander has starved themself so opponent will have to feed them\n");
+                              (*opponent).possibleMoves = possibleMoves;
+                           }
+                           else {
+                              free(possibleMoves);
+                              (*opponent).possibleMoves = NULL;
+                           }
+                           if (finished) {
+                              printf("in move | in could Play | the game is finished\n");
+                              if ((*senderClient).myScore > (*opponent).myScore) {
+                                 write_client((*senderClient).sock, "You won :)\n");
+                                 write_client((*opponent).sock, "You lost :(\n");
+                              }
+
+                              else if ((*senderClient).myScore < (*opponent).myScore) {
+                                 write_client((*opponent).sock, "You won :)\n");
+                                 write_client((*senderClient).sock, "You lost :(\n");
+                              }
+                              else {
+                                 write_client((*senderClient).sock, "You tied :|\n");
+                                 write_client((*opponent).sock, "You tied :|\n");
+                              }
+                              resetPlayer(senderClient, false);
+                              resetPlayer(opponent, true);                              
+                           }
+                        }
+                     }
+                  }
+                  else if (command == SHOW_COMMANDS) {
+                     printf("in show commands\n");
+                     showCommands(*senderClient);
+                  }
+                  else if (command == LIST_GAMES) {
+                     printf("in list games\n");
+                     listGames(clients, *senderClient, actual);
+                  }
+                  else if (command == OBSERVE) {
+                     printf("in observe\n");
+                     if (senderClient->state == WAITING_TO_PLAY || senderClient->state == HAS_TO_PLAY) {
+                        printf("in observe | a player can't\n");
+                        write_client(senderClient->sock, "You can't observe as you are playing a game.\n");
+                     }
+                     else {
+                        Client* player = get_client_by_username(parameter, clients, actual);
+                        Client *opponent = get_client_by_username((*player).opponent, clients, actual);
+                        if (player != NULL) {
+                           if ((*player).state == WAITING_TO_PLAY || (*player).state == HAS_TO_PLAY) {
+                              bool show = true;
+                              if (player->private) {
+                                 if (!isFriend(senderClient, player)) {
+                                    show = false;
+                                    write_client(senderClient->sock, "The player is private. You can't observe them since you are not friends\n");
+                                 }
+                              }
+                              if (opponent->private) {
+                                 if (!isFriend(senderClient, opponent)) {
+                                    show = false;
+                                    write_client(senderClient->sock, "Their opponent is private. You can't observe them since you are not friends\n");
+                                 }
+                              }
+                              if (show) {
+                                 observe(player, senderClient);
+                                 showObservers(player, opponent, clients, actual);
+                              }
+                              
+                           }
+                           else {
+                              write_client(senderClient->sock, "The user you are trying to observe isn't playing a game.\n");
+                           }
+                        }
+                        else {
+                           write_client(senderClient->sock, "The user you are trying to observe isn't online or doesn't exist :(\n");
+                        } 
+                     }
+                  }
+                  else if (command == STOP_OBSERVING) {
+                     printf("in stop observing\n");
+                     Client * player = get_client_by_username(senderClient->observing, clients, actual);
+                     if (player != NULL) {
+                        stopObserving(player, senderClient, clients, actual);
+                     }
+                     else {
+                        write_client(senderClient->sock, "Currently you aren't observing anyone.\n");
+                     }
+                  }
+                  else if (command == PRIVATE) {
+                     senderClient->private = true;
+                  }
+                  else if (command == PUBLIC) {
+                     senderClient->private = false;
+                  }
+                  else if (command == NULL_COMMAND) {
+                     printf("in command not recognised\n");
+                     write_client(senderClient->sock, "Command not recognized. You can use 'showCommands' to see available commands.\n");
+                  }
+                  free(parameterCalculator);
                }
                break;
             }
@@ -336,29 +629,29 @@ static void write_client(SOCKET sock, const char *buffer)
 
 // -----------------------------------------fct we added + main at the end-----------------------------------
 
-static char* separateCommandParameter(const char* buffer, char* commandName, char*parameter) {
+static int separateCommandParameter(const char* buffer, char* commandName, char*parameter) {
    commandName[0] = 0;
    parameter[0] = 0;
 
    strncpy(commandName, buffer, BUF_SIZE - 1);
    strncpy(parameter, buffer, BUF_SIZE - 1);
-   char* ptrCmd = commandName;
-   char* ptrPar = parameter;
+   int ptrCmd = 0;
+   int ptrPar = 0;
 
-   while(*ptrCmd != ' ' && *ptrCmd != '\0') {
+   while(commandName[ptrCmd] != ' ' && commandName[ptrCmd] != '\0') {
       ptrCmd++;
       ptrPar++;
    }
-   if (*ptrCmd == ' ') {
+   if (commandName[ptrCmd] == ' ') {
       ptrPar++;
    }
-   else if (*ptrCmd == '\0') {
-      ptrPar[0] = 0;
-      strncpy(ptrPar, "", BUF_SIZE - 1);
+   else if (commandName[ptrCmd] == '\0') {
+      parameter[0] = 0;
+      strncpy(parameter, "", BUF_SIZE - 1);
    }
-   *ptrCmd = 0;
-   parameter = ptrPar;
-   return parameter;
+   // marks the end of the command word
+   commandName[ptrCmd] = 0;
+   return ptrPar;
 }
 
 static enum commands checkIfCommand(const char *commandSent){
@@ -366,6 +659,21 @@ static enum commands checkIfCommand(const char *commandSent){
 
    if (!strncmp(commandSent, "users", sizeof("users"))){
       command = USERS; 
+   }
+   else if (!strncmp(commandSent, "chat", sizeof("chat"))) {
+      command = CHAT;
+   }
+   else if (!strncmp(commandSent, "bio", sizeof("bio"))) {
+      command = BIO;
+   }
+   else if(!strncmp(commandSent, "readBio", sizeof("readBio"))) {
+      command = READ_BIO;
+   }
+   else if (!strncmp(commandSent, "friends", sizeof("friends"))) {
+      command = FRIENDS;
+   }
+   else if (!strncmp(commandSent, "removeFriend", sizeof("removeFriends"))) {
+      command = REMOVE_FRIENDS;
    }
    else if (!strncmp(commandSent, "challenge", sizeof("challenge"))) {
       command = CHALLENGE;
@@ -375,6 +683,33 @@ static enum commands checkIfCommand(const char *commandSent){
    }
    else if (!strncmp(commandSent, "reject", sizeof("reject"))) {
       command = REJECT;
+   }
+   else if (!strncmp(commandSent, "abandon", sizeof("abandon"))) {
+      command = ABANDON;
+   }
+   else if(!strncmp(commandSent, "move", sizeof("move"))) {
+      command = MOVE;
+   }
+   else if (!strncmp(commandSent, "showCommands", sizeof("showCommands"))) {
+      command = SHOW_COMMANDS;
+   }
+   else if(!strncmp(commandSent, "listGames", sizeof("listGames"))) {
+      command = LIST_GAMES;
+   }
+   else if(!strncmp(commandSent, "observe", sizeof("observe"))) {
+      command = OBSERVE;
+   }
+   else if(!strncmp(commandSent, "stopObserving", sizeof("stopObserving"))) {
+      command = STOP_OBSERVING;
+   }
+   else if(!strncmp(commandSent, "private", sizeof("private"))) {
+      command = PRIVATE;
+   }
+   else if(!strncmp(commandSent, "public", sizeof("public"))) {
+      command = PUBLIC;
+   }
+   else {
+      command = NULL_COMMAND;
    }
 
    return command;
@@ -419,14 +754,12 @@ static int check_usernames(Client *clients, Client sender, int actual){
 }
 
 static Client* get_client_by_username(const char* name, Client *clients, int actual){
-   printf("in get user name start\n");
    if (actual > 0) {
       for(int i = 0; i < actual; i++){
          if(strncmp(name, clients[i].name, sizeof(name))==0){
             return &(clients[i]);
          }
       }
-      printf("in get user name after for\n");
       return NULL;
    }
 }
@@ -436,7 +769,6 @@ static void send_challenge(Client* client, Client* sender){
    strcpy((*sender).opponent, (*client).name);
    (*client).state = CHALLENGED;
    (*sender).state = CHALLENGING;
-   printf("in send challenge after state and oppo bouhhhhhh put\n");
 
 
    char message[BUF_SIZE];
@@ -448,7 +780,6 @@ Please write 'accept' if you do and 'reject' if you don't.\n", sizeof message - 
 
    
    write_client((*client).sock, message);
-   printf("send challenge : %s as %d from %s as %d\n",(*sender).opponent, (*client).state, (*client).opponent, (*sender).state);
 }
 
 
@@ -456,14 +787,56 @@ static void get_answer_challenge(enum commands command, Client * sender, Client 
       Client* opponent = get_client_by_username((*sender).opponent, clients, actual);
       // the client answered accept
       if (command == ACCEPT){
-         printf("in accept\n");
-         (*sender).state = PLAYING;
-         (*opponent).state = PLAYING;
          write_client((*opponent).sock, "Your challenge has been accepted.\n");
+         
+         stopObserving(get_client_by_username(sender->observing, clients, actual), sender, clients, actual);
+         stopObserving(get_client_by_username(opponent->observing, clients, actual), opponent, clients, actual);
+
+         int * holes;
+         holes = malloc(sizeof(int)*numberOfHoles);
+         initGame(holes, numberOfHoles);
+         int player = get_random_player_one();
+         (*opponent).player = player;
+         int opponentScore = 0;
+         int myScore = 0;
+         if (player == 1) {
+            (*sender).player = 2;
+            (*sender).state = WAITING_TO_PLAY;
+            (*opponent).state = HAS_TO_PLAY;
+         }
+         else {
+            (*sender).player = 1;
+            (*sender).state = HAS_TO_PLAY;
+            (*opponent).state = WAITING_TO_PLAY;
+         }
+         (*sender).myScore = 0;
+         (*opponent).myScore = 0;
+         showGame(holes, numberOfHoles, (*sender).player, (*opponent).myScore, (*sender).myScore, sender, "Opponent's score", "My score", sender);
+
+         showGame(holes, numberOfHoles, (*opponent).player, (*sender).myScore, (*opponent).myScore, opponent, "Opponent's score", "My score", opponent);
+         (*sender).holes = holes;
+         (*opponent).holes = holes;
+         (*sender).possibleMoves = NULL;
+         (*opponent).possibleMoves = NULL;
+
+         char opponent_player[20];
+         sprintf(opponent_player, "%d", (*opponent).player);
+         write_client((*opponent).sock, "You are player : ");
+         write_client((*opponent).sock, opponent_player);
+         write_client((*opponent).sock, "\n");
+         write_client((*opponent).sock, "Player 1 begins\n");
+         write_client((*opponent).sock, "move [index]         - to move a seed from the hole with the given index \n");
+         char sender_player[20];
+         sprintf(sender_player, "%d", (*sender).player);
+         write_client((*sender).sock, "You are player : ");
+         write_client((*sender).sock, sender_player);
+         write_client((*sender).sock, "\n");
+         write_client((*sender).sock, "Player 1 begins\n");
+         write_client((*sender).sock, "move [index]         - to move a seed from the hole with the given index \n");
+
       }
       // the client answered reject
       else if (command == REJECT){
-         printf("in reject\n");
          (*sender).state = OTHER;
          (*opponent).state = OTHER;
          strcpy((*sender).opponent, "");
@@ -472,11 +845,183 @@ static void get_answer_challenge(enum commands command, Client * sender, Client 
       }
 }
 
-// what should happen when a person is challenged is that others can continue their life and the challenged cannot 
-// write anything exept accept, reject or disconnect
-// the challenger cannot challenge another person
-// others cannot challenge the two
+static int get_random_player_one() {
+   //This will give 1 if the challenger is gonna be player one and 2 if he's gonna be player two.
+   srand(time(NULL));
+   int n = rand()%2;
+   n++;
+   return n;
+}
 
+static void show(char *message, Client *sender) {
+   write_client((*sender).sock, message);
+}
+
+static void showCommands(Client sender) {
+   write_client(sender.sock, SHOWCOMMANDS);
+}
+
+static void resetPlayer(Client * player, bool holesFreed) {
+   if (!holesFreed) {
+      free(player->holes);
+   }
+   player->holes = NULL;
+
+   if (player->possibleMoves) {
+      free(player->possibleMoves);
+      player->possibleMoves = NULL;
+   }
+   
+   player->myScore = 0;
+   strcpy(player->opponent, "");
+   player->state = OTHER;
+}
+
+/*usage : 
+Client ** clientPairs = malloc(sizeof(Client*)*actual);
+for(int i = 0; i < actual; i++)
+{
+   clientPairs[i] = malloc(sizeof(Client)*2);
+}
+int onGoingGames = getOngoingGames(clients, actual, clientPairs);
+...
+for(int i = 0; i < actual; i++)
+   {
+      free(clientPairs[i]);
+   }
+   free(clientPairs);
+*/
+int getOngoingGames(Client * clients, int actual, Client ** clientPairs) {
+   int onGoingGamesNbr = 0;
+   Client * opponentAlreadyCounted = malloc(sizeof(Client)*actual); // actual/2 for the size is enough but just in case
+   bool hasAlreadyBeenCounted;
+   for(int i = 0; i < actual; i++)
+   {
+      if (clients[i].state == WAITING_TO_PLAY || clients[i].state == HAS_TO_PLAY) {
+         hasAlreadyBeenCounted = false;
+         int j = 0;
+         while (j < onGoingGamesNbr && !hasAlreadyBeenCounted) {
+            if (clients[i].sock == opponentAlreadyCounted[j].sock) {
+               hasAlreadyBeenCounted = true;
+            }
+            j++;
+         }
+
+         if (!hasAlreadyBeenCounted) {
+            clientPairs[onGoingGamesNbr][0] = clients[i];
+            clientPairs[onGoingGamesNbr][1] = *get_client_by_username(clients[i].opponent, clients, actual);
+            opponentAlreadyCounted[onGoingGamesNbr] = clientPairs[onGoingGamesNbr][1];
+            onGoingGamesNbr++;
+         }
+      }
+   }
+   free(opponentAlreadyCounted);
+   return onGoingGamesNbr;
+}
+
+static void listGames(Client * clients, Client sender, int actual) {
+   char message[BUF_SIZE];
+   message[0] = 0;
+
+   Client ** clientPairs = malloc(sizeof(Client*)*actual);
+   for(int i = 0; i < actual; i++)
+   {
+      clientPairs[i] = malloc(sizeof(Client)*2);
+   }
+   int onGoingGames = getOngoingGames(clients, actual, clientPairs);
+
+   strncpy(message, "---- ongoing games ----\n", BUF_SIZE - 1);
+
+   for(int i = 0; i < onGoingGames; i++)
+   {
+      // the asker's game (if they are playing) will also be shown
+      char score[20];
+      strncat(message, "- ", sizeof message - strlen(message) - 1);
+      strncat(message, clientPairs[i][0].name, sizeof message - strlen(message) - 1);
+      strncat(message, " vs ", sizeof message - strlen(message) - 1);
+      strncat(message, clientPairs[i][1].name, sizeof message - strlen(message) - 1);
+      strncat(message, " (", sizeof message - strlen(message) - 1);
+      sprintf(score, "%d", clientPairs[i][0].myScore);
+      strncat(message, score, sizeof message - strlen(message) - 1);
+      strncat(message, " to ", sizeof message - strlen(message) - 1);
+      sprintf(score, "%d", clientPairs[i][1].myScore);
+      strncat(message, score, sizeof message - strlen(message) - 1);
+      strncat(message, ")\n", sizeof message - strlen(message) - 1);
+   }
+
+   strncat(message, "----\n", sizeof message - strlen(message) - 1);
+
+   for(int i = 0; i < actual; i++)
+   {
+      free(clientPairs[i]);
+   }
+   free(clientPairs);
+
+   write_client(sender.sock, message);
+}
+
+static void observe(Client * player, Client * sender) {
+   strcpy(sender->observing, player->name);
+
+   if(player->observers) {
+      player->observers[player->actualObservers] = sender->name;
+      player->actualObservers++;
+   }
+}
+
+static void stopObserving(Client * player, Client * observer, Client * clients, int actual) {
+   if (player != NULL) {
+      // pour chaque nom de client dans observers - on l'enlève et on enlève chez cet observer le player
+      for (int i = 0; i < player->actualObservers; i++) {
+         if (observer != NULL) {
+            if (observer->sock == get_client_by_username(player->observers[i], clients, actual)->sock) {
+               strcpy(observer->observing, "");
+
+               /* we remove the client in the array */
+               memmove(player->observers + i, player->observers + i + 1, (player->actualObservers - i - 1) * sizeof(BUF_SIZE));
+               /* number client - 1 */
+               player->actualObservers--;
+            }
+         }
+         else {
+            strcpy(get_client_by_username(player->observers[i], clients, actual)->observing, "");
+
+            /* we remove the client in the array */
+            memmove(player->observers + i, player->observers + i + 1, (player->actualObservers - i - 1) * sizeof(BUF_SIZE));
+            /* number client - 1 */
+            player->actualObservers--;
+         }
+      }
+   }
+}
+
+static void showObservers(Client * player1, Client * player2, Client * clients, int actual) {
+   for (int i = 0; i < player1->actualObservers; i++) {
+      if (player1->player == 1) {
+         showGame((*player1).holes, numberOfHoles, (*player1).player, (*player2).myScore, (*player1).myScore, player1, player2->name, player1->name, get_client_by_username(player1->observers[i], clients, actual));
+      }
+      else {
+         showGame((*player2).holes, numberOfHoles, (*player2).player, (*player1).myScore, (*player2).myScore, player2, player1->name, player2->name, get_client_by_username(player1->observers[i], clients, actual));
+      }
+   }
+   for (int i = 0; i < player2->actualObservers; i++) {
+      if (player1->player == 1) {
+         showGame((*player1).holes, numberOfHoles, (*player1).player, (*player2).myScore, (*player1).myScore, player1, player2->name, player1->name, get_client_by_username(player2->observers[i], clients, actual));
+      }
+      else {
+         showGame((*player2).holes, numberOfHoles, (*player2).player, (*player1).myScore, (*player2).myScore, player2, player1->name, player2->name, get_client_by_username(player2->observers[i], clients, actual));
+      }
+   }
+}
+
+static bool isFriend(Client * asker, Client * player) {
+   for (int i = 0; i < player->numberFriends; i++) {
+      if (!strcmp(asker->name, player->friends[i])) {
+         return true;
+      }
+   }
+   return false;
+}
 
 int main(int argc, char **argv)
 {

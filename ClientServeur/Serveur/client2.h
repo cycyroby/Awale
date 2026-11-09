@@ -2,15 +2,30 @@
 #define CLIENT_H
 
 #include "server2.h"
+#include <stdbool.h>
 
-enum state{PLAYING, CHALLENGING, CHALLENGED, OTHER};
+enum state{HAS_TO_PLAY, WAITING_TO_PLAY, CHALLENGING, CHALLENGED, OTHER};
 
-typedef struct
+
+
+
+typedef struct Client
 {
    SOCKET sock;
    char name[BUF_SIZE];
    enum state state;
+   bool private;
    char opponent[BUF_SIZE];
-}Client;
+   int player;
+   int *holes;
+   int myScore;
+   int *possibleMoves;
+   char observing[BUF_SIZE];
+   char * observers[BUF_SIZE];
+   int actualObservers;
+   char bio[BUF_SIZE];
+   char *friends[BUF_SIZE];
+   int numberFriends;
+} Client;
 
 #endif /* guard */

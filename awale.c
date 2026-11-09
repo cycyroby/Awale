@@ -1,6 +1,9 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#include <string.h>
+
+#include "ClientServeur/Serveur/client2.h"
 
 /*
 initialise the game with 4 seeds in each hole
@@ -9,28 +12,43 @@ void initGame(int *holes, int numberOfHoles) {
     for (int i=0; i<numberOfHoles; i++) {
         holes[i] = 4;
     }
+    /* 
+    //test
+    holes[0] = 0;
+    holes[1] = 0;
+    holes[2] = 0;
+    holes[3] = 0;
+    holes[4] = 4;
+    holes[5] = 1;
+    holes[6] = 1;
+    holes[7] = 1;
+    holes[8] = 1;
+    holes[9] = 0;
+    holes[10] = 0;
+    holes[11] = 1;
+    */
 }
 
 
 /*
 used in show game to make the separation line
 */
-void printSeparationLine(int numberOfHoles, int holeWidth){
+void printSeparationLine(char *message, int numberOfHoles, int holeWidth){
     // separation line
     for (int i=0; i<numberOfHoles/2; i++) {
-        printf(" ");
+        strcat(message, " ");
         for (int j=0; j<holeWidth; j++) {
-            printf("_");
+            strcat(message, "_");
         }
     }
-    printf("\n");
+    strcat(message, "\n");
 }
 
 /*
 Line number indicates if we're printing the row of holes of the opponent (lineNumber 1) or ours (lineNumber 2)
 */
-void printIndexes(int numberOfHoles, int holeWidth, int index, int lineNumber) {
-    printf("\n");
+void printIndexes(char *message, int numberOfHoles, int holeWidth, int index, int lineNumber) {
+    strcat(message, "\n");
     int next;
     if (lineNumber == 2) {
         next = 1;
@@ -40,7 +58,7 @@ void printIndexes(int numberOfHoles, int holeWidth, int index, int lineNumber) {
     }
     for (int i=0; i<numberOfHoles/2; i++) {
         
-        printf(" ");
+        strcat(message, " ");
         
         // the number of characters the number of seeds take
         int numberPlaces;
@@ -62,20 +80,23 @@ void printIndexes(int numberOfHoles, int holeWidth, int index, int lineNumber) {
 
         // showing the hole
         for (int j=0; j<(holeWidth - numberPlaces)/2; j++) {
-            printf(" ");
+            strcat(message, " ");
         }
-        printf("%d", (index + i*next));
+        int result = index + (i*next);
+        char temp[20];
+        sprintf(temp, "%d", result);
+        strcat(message, temp);
         for (int j=0; j<(holeWidth - numberPlaces)/2 + numberSpacesAfter; j++) {
-            printf(" ");
+            strcat(message, " ");
         }
     }
-    printf("     indexes\n");
+    strcat(message, "     indexes\n");
 }
 
 /*
 Line number indicates if we're printing the row of holes of the opponent (lineNumber 1) or ours (lineNumber 2)
 */
-void printHoles(int*holes, int numberOfHoles, int holeWidth, int index, int lineNumber, char*scoreText, int score) {
+void printHoles(char *message, int*holes, int numberOfHoles, int holeWidth, int index, int lineNumber, char*scoreText, int score) {
     int next;
     if (lineNumber == 2) {
         next = 1;
@@ -84,7 +105,7 @@ void printHoles(int*holes, int numberOfHoles, int holeWidth, int index, int line
         next = -1;
     }
     for (int i=0; i<numberOfHoles/2; i++) {
-        printf("|");
+        strcat(message, "|");
         int numberOfSeeds = holes[index + i*next];
         
         // the number of characters the number of seeds take
@@ -107,14 +128,22 @@ void printHoles(int*holes, int numberOfHoles, int holeWidth, int index, int line
 
         // showing the hole
         for (int j=0; j<(holeWidth - numberPlaces)/2; j++) {
-            printf("_");
+            strcat(message, "_");
         }
-        printf("%d", numberOfSeeds);
+        char nOfS_char[20];
+        sprintf(nOfS_char, "%d", numberOfSeeds);
+        strcat(message, nOfS_char);
         for (int j=0; j<(holeWidth - numberPlaces)/2 + numberSpacesAfter; j++) {
-            printf("_");
+            strcat(message, "_");
         }
     }
-    printf("|    %s : %d\n", scoreText, score);
+    strcat(message, "|    ");
+    strcat(message, scoreText);
+    strcat(message," : ");
+    char score_char[20];
+    sprintf(score_char, "%d", score);
+    strcat(message, score_char);
+    strcat(message, "\n");
 }
 
 /* 
@@ -132,7 +161,7 @@ void printHoles(int*holes, int numberOfHoles, int holeWidth, int index, int line
   ___________ ___________ ___________ ___________ ___________ ___________ 
  |_holes[6]__|_holes[7]__|_holes[8]__|_holes[9]__|_holes[10]_|_holes[11]_| player 2
  */
-void showGame(int *holes, int numberOfHoles, int player, int opponentScore, int myScore) {
+void showGame(int *holes, int numberOfHoles, int player, int opponentScore, int myScore, Client *sender, char*opponent, char*me, Client*showTo) {
     int holeWidth = 4;
 
     int iOpp;
@@ -147,51 +176,35 @@ void showGame(int *holes, int numberOfHoles, int player, int opponentScore, int 
         iMine = 6;
     }
 
-    printIndexes(numberOfHoles, holeWidth, iOpp, 1);
+    char *message = malloc(BUF_SIZE * sizeof(char));
+    message[0] = '\0';
+    strcpy(message, "GAME : \n");
+    printIndexes(message, numberOfHoles, holeWidth, iOpp, 1);
 
     // first line
-    printSeparationLine(numberOfHoles, holeWidth);
+    printSeparationLine(message, numberOfHoles, holeWidth);
+
 
     // show opponnent's holes
-    printHoles(holes, numberOfHoles, holeWidth, iOpp, 1, "Opponent's score", opponentScore);
+    //"Opponent's score"
+    printHoles(message, holes, numberOfHoles, holeWidth, iOpp, 1, opponent, opponentScore);
+
 
     // second separation line
-    printSeparationLine(numberOfHoles, holeWidth);
+    printSeparationLine(message, numberOfHoles, holeWidth);
 
     // show my holes
-    printHoles(holes, numberOfHoles, holeWidth, iMine, 2, "My score", myScore);
+    //"My score"
+    printHoles(message, holes, numberOfHoles, holeWidth, iMine, 2, me, myScore);
 
-    printIndexes(numberOfHoles, holeWidth, iMine, 2);
+    printIndexes(message, numberOfHoles, holeWidth, iMine, 2);
 
-    printf("\n");
+    strcat(message, "\n");
+
+
+    show(message, showTo);
 }
 
-/*
-we choose the index hole so it moves the seeds in that hole in the counterclockwise direction
-*/
-int moveSeed(int index, int *holes) {
-
-    int y = holes[index];
-    if (y != 0) {
-        int i;
-        int endIndex = index+y+1;
-
-        for (i = index+1; i < endIndex; i++){
-            if (i%12 != index){
-                holes[i%12] = holes[i%12] + 1;
-                holes[index] -= 1;
-            }
-            else{
-                endIndex++;
-            }
-        }
-        // arrival index
-        return (endIndex-1)%12;
-    }
-    else {
-        return -1;
-    }
-}
 
 /*
 checks if all the holes of the player given are at 0 seeds (= it needs to be fed)
@@ -221,7 +234,7 @@ bool hasToBeFed(int player, int * holes) {
 /*
 a losing player given as input (= a player that has to be fed) checks which holes can feed it from its opponent's holes
 */
-bool canFeed(int player, int * holes, int* possibleHoles) {
+bool canFeed(int player, int * holes, int* possibleHoles, Client * opponent, int * possibleMoves) {
     int numberOfHoles = 0;
     int * holesThatCanFeed = malloc((sizeof(int)*12));
     int arrivingHole;
@@ -256,13 +269,21 @@ bool canFeed(int player, int * holes, int* possibleHoles) {
     }
 
     if(numberOfHoles != 0) {
+        printf("a player has to be fed and possible moves will no longer be NULL\n");
+        show("You can only play the holes :", opponent);
         int j = 0;
         for (int k = 0; k < 12; k++) {
             if (holesThatCanFeed[k] == 1) {
                 possibleHoles[j] = k;
+                possibleMoves[j] = k;
                 j++;
+                show(" ", opponent);
+                char possibleHole[20];
+                sprintf(possibleHole, "%d", k);
+                show(possibleHole, opponent);
             }
         }
+        show("\n", opponent);
         return true;
     }
     else {
@@ -272,7 +293,7 @@ bool canFeed(int player, int * holes, int* possibleHoles) {
 }
 
 /*returns true if the game is done because one won't be able to have any more seeds (is hungry and can't be fed)*/
-bool isGameFinishedHunger(int * holes) {
+bool isGameFinishedHunger(int * holes, Client * opponent, bool *feed, int *possibleMoves) {
     int player;
     int*possibleHoles;
     if (hasToBeFed(1, holes)){
@@ -282,12 +303,14 @@ bool isGameFinishedHunger(int * holes) {
             return true;
         }
         possibleHoles = malloc(sizeof(int)*12);
-        return !canFeed(player, holes, possibleHoles);
+        *feed = true;
+        return !canFeed(player, holes, possibleHoles, opponent, possibleMoves);
     }
     else if (hasToBeFed(2, holes)){
         player = 2;
         possibleHoles = malloc(sizeof(int)*12);
-        return !canFeed(player, holes, possibleHoles);
+        *feed = true;
+        return !canFeed(player, holes, possibleHoles, opponent, possibleMoves);
     }
 }
 
@@ -300,26 +323,29 @@ bool isGameFinishedScore(int*holes, int myScore, int opponentScore){
 returns true if the game is done and prints why it is done
 // we're not doing the we can't capture any seeds finishing rule for the moment
 */
-bool isGameFinished(int * holes, int myScore, int opponentScore) {
+bool isGameFinished(int * holes, int myScore, int opponentScore, Client * sender, Client * opponent, bool *feed, int *possibleMoves) {
     bool score = isGameFinishedScore(holes, myScore, opponentScore);
-    bool hunger = isGameFinishedHunger(holes);
+    bool hunger = isGameFinishedHunger(holes, opponent, feed, possibleMoves);
     if (score){
-        printf("One of the players has more than 25 points !\n");
+        show("One of the players has more than 25 points !\n", sender);
+        show("One of the players has more than 25 points !\n", opponent);
     }
     if (hunger){
-        printf("One of the players can't have any more seeds to continue playing !\n");
+        show("One of the players can't have any more seeds to continue playing !\n", sender);
+        show("One of the players can't have any more seeds to continue playing !\n", opponent);
     }
     return score||hunger;
 }
 
 /*
-
+player : player who is collecting the seeds
+arrival : the index at which they arrived
 */
 int collectSeed(int player, int * holes, int myScore, int arrival) {
     if (player == 1) {
         if (5 < arrival && arrival < 12) {
             int i = 0;
-            while ((holes[arrival - i] == 2 || holes[arrival - i] == 3) && arrival > 5) {
+            while ((holes[arrival - i] == 2 || holes[arrival - i] == 3) && (arrival-i) > 5) {
                 myScore += holes[arrival - i];
                 holes[arrival-i] = 0;
                 i++;
@@ -330,7 +356,7 @@ int collectSeed(int player, int * holes, int myScore, int arrival) {
     if (player == 2) {
         if (0 <= arrival && arrival < 6) {
             int i = 0;
-            while ((holes[arrival - i] == 2 || holes[arrival -i] == 3 ) && arrival >= 0) {
+            while ((holes[arrival - i] == 2 || holes[arrival -i] == 3 ) && (arrival-i) >= 0) {
                 myScore += holes[arrival - i];
                 holes[arrival-i] = 0;
                 i++;
@@ -341,3 +367,64 @@ int collectSeed(int player, int * holes, int myScore, int arrival) {
     return myScore;
 }
 
+/*
+we choose the index hole so it moves the seeds in that hole in the counterclockwise direction
+*/
+int moveSeed(int index, int *holes) {
+    int y = holes[index];
+    if (y != 0) {
+        // test if the move starves the opponent
+        int opponentPlayer;
+        int player;
+        if (0 <= index && index < 6) {
+            player = 1;
+            opponentPlayer = 2;
+        }
+        else if(6 <= index && index < 12) {
+            player = 2;
+            opponentPlayer = 1;
+        }
+        bool doesntStarve = false;
+
+        int* testHoles = malloc(sizeof(int)*12);
+        for (int i=0; i<12; i++) {
+            testHoles[i] = holes[i];
+        }
+
+        int endIndex = index+y+1;
+        for (int i = index+1; i < endIndex; i++){
+            if (i%12 != index){
+                testHoles[i%12] = testHoles[i%12] + 1;
+                testHoles[index] -= 1;
+            }
+            else{
+                endIndex++;
+            }
+        }
+        collectSeed(player, testHoles, 0, (endIndex-1)%12);
+        doesntStarve = !hasToBeFed(opponentPlayer, testHoles);
+        free(testHoles);
+        // end test
+
+        if (doesntStarve) {
+            int endIndex = index+y+1;
+            for (int i = index+1; i < endIndex; i++){
+                if (i%12 != index){
+                    holes[i%12] = holes[i%12] + 1;
+                    holes[index] -= 1;
+                }
+                else{
+                    endIndex++;
+                }
+            }
+            // arrival index
+            return (endIndex-1)%12;
+        }
+        else {
+            return -2;
+        }
+    }
+    else {
+        return -1;
+    }
+}
